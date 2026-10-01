@@ -6,6 +6,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
+  CalendarClock,
   ChevronsLeft,
   ChevronsRight,
   Flag,
@@ -76,6 +77,13 @@ export default function Sidebar() {
       badgeTone: "orange",
     },
     {
+      href: "/due",
+      label: "Due",
+      icon: CalendarClock,
+      badge: (counts?.overdue ?? 0) + (counts?.due_soon ?? 0) || undefined,
+      badgeTone: counts && counts.overdue > 0 ? "red" : "orange",
+    },
+    {
       href: "/review",
       label: "Review",
       icon: RefreshCw,
@@ -85,7 +93,6 @@ export default function Sidebar() {
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
-  const dueTotal = (counts?.overdue ?? 0) + (counts?.due_soon ?? 0);
   const Toggle = isCollapsed ? ChevronsRight : ChevronsLeft;
 
   return (
@@ -148,20 +155,13 @@ export default function Sidebar() {
               </Link>
             );
           })}
-          {!isCollapsed && dueTotal > 0 && (
-            <div className="px-3 pt-3 text-xs text-gray-500 flex items-center gap-2">
-              <span>Due</span>
-              {counts && counts.overdue > 0 && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                  {counts.overdue} overdue
-                </span>
-              )}
-              {counts && counts.due_soon > 0 && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
-                  {counts.due_soon} soon
-                </span>
-              )}
-            </div>
+          {!isCollapsed && counts && counts.overdue > 0 && (
+            <Link
+              href="/due"
+              className="block px-3 pt-1 text-xs text-red-600 hover:underline"
+            >
+              {counts.overdue} overdue
+            </Link>
           )}
         </nav>
       </div>

@@ -10,6 +10,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { dayLabel } from "@/lib/dates";
 import { useEffect, useMemo, useState } from "react";
 import TimezonePicker from "@/components/TimezonePicker";
+import TagManager from "@/components/TagManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -156,6 +157,18 @@ function SettingsContent() {
           />
           {savingTz && <span className="text-xs text-gray-500">Saving…</span>}
         </div>
+      </section>
+
+      <section
+        id="tags"
+        className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 scroll-mt-20"
+      >
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Tags</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Contexts, people, places — anything that cuts across projects. The
+          Tags page shows what you can act on in each.
+        </p>
+        <TagManager />
       </section>
 
       <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

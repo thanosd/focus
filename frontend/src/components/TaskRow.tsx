@@ -7,6 +7,7 @@ import { useCounts } from "@/contexts/CountsContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dateTimeLabel, dayLabel, isPast } from "@/lib/dates";
+import { unavailableReason } from "@/lib/availability";
 import { useState } from "react";
 import {
   Calendar,
@@ -14,6 +15,7 @@ import {
   Clock,
   Flag,
   Folder,
+  GripVertical,
   MoreHorizontal,
   Repeat,
   RotateCcw,
@@ -46,6 +48,12 @@ interface TaskRowProps {
   /** Hide the project chip (e.g. inside a project's own list). */
   hideProject?: boolean;
   selected?: boolean;
+  /** 1-based position shown for sequential projects. */
+  index?: number;
+  /** Props for the drag handle (from useSortable); renders the grip when set. */
+  handleProps?: React.HTMLAttributes<HTMLButtonElement>;
+  /** Visual state while being dragged. */
+  dragging?: boolean;
   onSelect: (task: Task) => void;
   onUpdated: (task: Task) => void;
   onCompleted?: (task: Task, next?: Task) => void;
@@ -58,6 +66,9 @@ export default function TaskRow({
   showProjectPicker = false,
   hideProject = false,
   selected = false,
+  index,
+  handleProps,
+  dragging = false,
   onSelect,
   onUpdated,
   onCompleted,
@@ -75,6 +86,11 @@ export default function TaskRow({
   const active = task.status === "active";
   const deferred = !!task.defer_until && !isPast(task.defer_until);
   const overdue = !!task.due_at && isPast(task.due_at) && active;
+  const project = task.project_id
+    ? projects.find((p) => p.id === task.project_id)
+    : undefined;
+  const reason = unavailableReason(task, project, timezone);
+  const muted = active && !task.is_available;
 
   const complete = async () => {
     if (busy) return;
@@ -174,15 +190,45 @@ export default function TaskRow({
   return (
     <div
       className={cn(
-        "group relative flex items-start gap-3 px-3 py-2.5 border-b border-gray-100 last:border-b-0 cursor-pointer transition-colors border-l-4",
+        "group relative flex items-start gap-2 px-3 py-2.5 border-b border-gray-100 last:border-b-0 cursor-pointer transition-colors border-l-4",
         selected ? "bg-blue-50" : "hover:bg-gray-50",
-        task.flagged && active
+        task.flagged && active && !muted
           ? "border-l-red-400 bg-red-50/40"
           : "border-l-transparent",
         selected && task.flagged && active && "bg-blue-50",
+        muted && !selected && "bg-gray-50/60",
+        dragging && "shadow-lg ring-1 ring-blue-200 bg-white",
       )}
       onClick={() => onSelect(task)}
     >
+      {handleProps && (
+        <button
+          type="button"
+          {...handleProps}
+          onClick={stop}
+          aria-label="Drag to reorder"
+          title="Drag to reorder"
+          className={cn(
+            "mt-0.5 -ml-1 p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+            "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            dragging && "opacity-100 text-gray-500",
+          )}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+      )}
+      {index !== undefined && (
+        <span
+          className={cn(
+            "mt-0.5 w-5 text-right text-xs tabular-nums flex-shrink-0 select-none",
+            muted ? "text-gray-300" : "text-blue-600 font-semibold",
+          )}
+          aria-label={`Step ${index}`}
+        >
+          {index}
+        </span>
+      )}
       <button
         type="button"
         onClick={(e) => {
@@ -198,7 +244,9 @@ export default function TaskRow({
             ? "bg-blue-600 border-blue-600 text-white"
             : dropped
               ? "border-gray-300 bg-gray-100 text-transparent"
-              : "border-gray-300 hover:border-blue-500 text-transparent hover:text-blue-300",
+              : muted
+                ? "border-gray-200 bg-gray-50 hover:border-blue-400 text-transparent hover:text-blue-200"
+                : "border-gray-300 hover:border-blue-500 text-transparent hover:text-blue-300",
         )}
       >
         <Check className="w-3 h-3" strokeWidth={3} />
@@ -211,13 +259,23 @@ export default function TaskRow({
               "text-sm truncate",
               done || dropped
                 ? "line-through text-gray-400"
-                : task.flagged
-                  ? "font-medium text-gray-900"
-                  : "text-gray-900",
+                : muted
+                  ? "text-gray-400"
+                  : task.flagged
+                    ? "font-medium text-gray-900"
+                    : "text-gray-900",
             )}
           >
             {task.title}
           </span>
+          {reason && (
+            <span
+              className="text-[10px] text-gray-400 italic whitespace-nowrap flex-shrink-0"
+              title="Not available right now"
+            >
+              {reason}
+            </span>
+          )}
           {dropped && (
             <span className="text-[10px] uppercase tracking-wide text-gray-400 border border-gray-200 rounded px-1">
               dropped
@@ -232,7 +290,12 @@ export default function TaskRow({
           task.due_at ||
           (!hideProject && task.project_id) ||
           showProjectPicker) && (
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <div
+            className={cn(
+              "mt-1 flex flex-wrap items-center gap-1.5",
+              muted && "opacity-60",
+            )}
+          >
             {showProjectPicker ? (
               <ProjectPicker
                 projects={projects}
@@ -332,7 +395,9 @@ export default function TaskRow({
           className={cn(
             "p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
             task.flagged
-              ? "text-red-500 hover:text-red-600"
+              ? muted
+                ? "text-red-300 hover:text-red-500"
+                : "text-red-500 hover:text-red-600"
               : "text-gray-300 hover:text-orange-500 hover:bg-gray-100 group-hover:text-gray-400",
           )}
         >

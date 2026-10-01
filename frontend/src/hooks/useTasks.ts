@@ -57,5 +57,22 @@ export function useTasks(query: TaskQuery) {
     setTasks((list) => [task, ...list]);
   }, []);
 
-  return { tasks, loading, error, reload, upsert, remove, prepend, setTasks };
+  /** New tasks are created with the highest sort_order, i.e. at the end. */
+  const append = useCallback((task: Task) => {
+    setTasks((list) =>
+      list.some((t) => t.id === task.id) ? list : [...list, task],
+    );
+  }, []);
+
+  return {
+    tasks,
+    loading,
+    error,
+    reload,
+    upsert,
+    remove,
+    prepend,
+    append,
+    setTasks,
+  };
 }

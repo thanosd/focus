@@ -2,13 +2,21 @@
 
 import type { Project, ProjectStatus, UpdateProjectRequest } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConfirm } from "@/contexts/ConfirmContext";
 import { dayLabel } from "@/lib/dates";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import {
+  CheckCircle2,
+  PauseCircle,
+  PlayCircle,
+  X,
+  XCircle,
+} from "lucide-react";
 import { Field } from "@/components/TaskInspector";
 import { StatusBadge } from "@/components/ProjectTree";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -48,6 +56,7 @@ export default function ProjectInspector({
   onClose,
 }: ProjectInspectorProps) {
   const { timezone } = useAuth();
+  const confirm = useConfirm();
   const [name, setName] = useState(project.name);
   const [note, setNote] = useState(project.note);
 
@@ -60,6 +69,25 @@ export default function ProjectInspector({
     (p) => !p.parent_id && p.id !== project.id && p.status === "active",
   );
   const canNest = childCount === 0;
+  const closed = project.status === "completed" || project.status === "dropped";
+
+  const setStatus = async (status: ProjectStatus) => {
+    if (status === "completed" || status === "dropped") {
+      const n = project.remaining_task_count;
+      const ok = await confirm({
+        title: `${status === "completed" ? "Complete" : "Drop"} "${project.name}"?`,
+        description:
+          n > 0
+            ? `${n} remaining task${n === 1 ? "" : "s"} will stop being available. The project stays in the archive and can be reactivated.`
+            : "The project stays in the archive and can be reactivated.",
+        confirmLabel:
+          status === "completed" ? "Complete project" : "Drop project",
+        destructive: status === "dropped",
+      });
+      if (!ok) return;
+    }
+    onPatch({ status });
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -207,21 +235,77 @@ export default function ProjectInspector({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-t border-gray-200 bg-gray-50">
-        <Button variant="primary" onClick={onReview} disabled={busy}>
-          Mark reviewed
-        </Button>
-        {actions}
-        {onDelete && (
-          <Button
-            variant="danger-ghost"
-            onClick={onDelete}
-            disabled={busy}
-            className="ml-auto"
-          >
-            Delete
+      <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="primary" onClick={onReview} disabled={busy}>
+            Mark reviewed
           </Button>
-        )}
+          {actions}
+        </div>
+        {/* Review mode supplies its own status actions above. */}
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-2",
+            actions && "hidden",
+          )}
+        >
+          {closed ? (
+            <Button
+              size="xs"
+              onClick={() => setStatus("active")}
+              disabled={busy}
+            >
+              <PlayCircle className="w-3.5 h-3.5" /> Reactivate
+            </Button>
+          ) : (
+            <>
+              <Button
+                size="xs"
+                onClick={() => setStatus("completed")}
+                disabled={busy}
+                title="Mark the whole project done"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" /> Complete project
+              </Button>
+              {project.status === "on_hold" ? (
+                <Button
+                  size="xs"
+                  onClick={() => setStatus("active")}
+                  disabled={busy}
+                >
+                  <PlayCircle className="w-3.5 h-3.5" /> Reactivate
+                </Button>
+              ) : (
+                <Button
+                  size="xs"
+                  onClick={() => setStatus("on_hold")}
+                  disabled={busy}
+                >
+                  <PauseCircle className="w-3.5 h-3.5" /> Put on hold
+                </Button>
+              )}
+              <Button
+                size="xs"
+                variant="danger-ghost"
+                onClick={() => setStatus("dropped")}
+                disabled={busy}
+              >
+                <XCircle className="w-3.5 h-3.5" /> Drop project
+              </Button>
+            </>
+          )}
+          {onDelete && (
+            <Button
+              size="xs"
+              variant="danger-ghost"
+              onClick={onDelete}
+              disabled={busy}
+              className="ml-auto"
+            >
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

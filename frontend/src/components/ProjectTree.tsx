@@ -1,10 +1,25 @@
 "use client";
 
-import type { Project } from "@/lib/types";
+import type { Project, ProjectStatus } from "@/lib/types";
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronRight,
+  MoreHorizontal,
+  PauseCircle,
+  PlayCircle,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 interface ProjectTreeProps {
@@ -13,6 +28,9 @@ interface ProjectTreeProps {
   /** Show on_hold / completed / dropped projects too. */
   showInactive: boolean;
   onToggleInactive: (v: boolean) => void;
+  /** Row menu actions; the menu is hidden when these are absent. */
+  onSetStatus?: (project: Project, status: ProjectStatus) => void;
+  onDelete?: (project: Project) => void;
 }
 
 export function StatusBadge({ status }: { status: Project["status"] }) {
@@ -40,6 +58,8 @@ export default function ProjectTree({
   selectedId,
   showInactive,
   onToggleInactive,
+  onSetStatus,
+  onDelete,
 }: ProjectTreeProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const visible = showInactive
@@ -59,12 +79,13 @@ export default function ProjectTree({
     const active = p.id === selectedId;
     const kids = depth === 0 ? childrenOf(p.id) : [];
     const isCollapsed = collapsed.has(p.id);
+    const closed = p.status === "completed" || p.status === "dropped";
     return (
-      <div key={p.id}>
+      <div key={p.id} className="group/row relative">
         <Link
           href={`/projects/${p.id}`}
           className={cn(
-            "flex items-center gap-2 py-1.5 pr-2 rounded-md text-sm transition-colors",
+            "flex items-center gap-2 py-1.5 pr-8 rounded-md text-sm transition-colors",
             active
               ? "bg-blue-50 text-blue-700 font-medium"
               : "text-gray-700 hover:bg-gray-100",
@@ -109,6 +130,63 @@ export default function ProjectTree({
             {p.available_task_count}/{p.remaining_task_count}
           </span>
         </Link>
+        {(onSetStatus || onDelete) && (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Actions for ${p.name}`}
+                  className="p-0.5 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-200 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {onSetStatus &&
+                  (closed ? (
+                    <DropdownMenuItem onSelect={() => onSetStatus(p, "active")}>
+                      <PlayCircle /> Reactivate
+                    </DropdownMenuItem>
+                  ) : (
+                    <>
+                      <DropdownMenuItem
+                        onSelect={() => onSetStatus(p, "completed")}
+                      >
+                        <CheckCircle2 /> Complete
+                      </DropdownMenuItem>
+                      {p.status === "on_hold" ? (
+                        <DropdownMenuItem
+                          onSelect={() => onSetStatus(p, "active")}
+                        >
+                          <PlayCircle /> Reactivate
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onSelect={() => onSetStatus(p, "on_hold")}
+                        >
+                          <PauseCircle /> Put on hold
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onSelect={() => onSetStatus(p, "dropped")}
+                      >
+                        <XCircle /> Drop
+                      </DropdownMenuItem>
+                    </>
+                  ))}
+                {onDelete && (
+                  <>
+                    {onSetStatus && <DropdownMenuSeparator />}
+                    <DropdownMenuItem destructive onSelect={() => onDelete(p)}>
+                      <Trash2 /> Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
         {!isCollapsed && kids.map((k) => row(k, 1))}
       </div>
     );

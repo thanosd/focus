@@ -5,8 +5,11 @@ import ProjectTree from "@/components/ProjectTree";
 import ProjectForm from "@/components/ProjectForm";
 import ProjectView from "@/components/ProjectView";
 import { useProjectsAndTags } from "@/hooks/useProjectsAndTags";
-import { apiClient } from "@/lib/api-client";
-import type { Project } from "@/lib/types";
+import { apiClient, errorMessage } from "@/lib/api-client";
+import type { Project, ProjectStatus } from "@/lib/types";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { useCounts } from "@/contexts/CountsContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
@@ -24,6 +27,11 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [creating, setCreating] = useState(false);
+  // Bumped after tree-menu changes so the open ProjectView reloads.
+  const [version, setVersion] = useState(0);
+  const { toast } = useToast();
+  const confirm = useConfirm();
+  const { refreshCounts } = useCounts();
 
   // The picker list only holds active/on-hold projects; the tree can show
   // everything when the filter is on.
@@ -41,6 +49,53 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
   }, [reload]);
 
   const treeProjects = showInactive ? allProjects : activeProjects;
+
+  const setStatus = async (project: Project, status: ProjectStatus) => {
+    if (status === "completed" || status === "dropped") {
+      const ok = await confirm({
+        title: `${status === "completed" ? "Complete" : "Drop"} "${project.name}"?`,
+        description:
+          "Its tasks stop being available. The project stays in the archive and can be reactivated.",
+        confirmLabel:
+          status === "completed" ? "Complete project" : "Drop project",
+        destructive: status === "dropped",
+      });
+      if (!ok) return;
+    }
+    const { error } = await apiClient.PATCH("/api/projects/{projectId}", {
+      params: { path: { projectId: project.id } },
+      body: { status },
+    });
+    if (error) {
+      toast(errorMessage(error, "Couldn't update project"), "error");
+      return;
+    }
+    toast(`Project ${status.replace("_", " ")}`, "success");
+    reload();
+    refreshCounts();
+    setVersion((v) => v + 1);
+  };
+
+  const deleteProject = async (project: Project) => {
+    const ok = await confirm({
+      title: `Delete "${project.name}"?`,
+      description:
+        "All of its tasks (and sub-projects) will be permanently deleted.",
+      confirmLabel: "Delete project",
+      destructive: true,
+    });
+    if (!ok) return;
+    const { error } = await apiClient.DELETE("/api/projects/{projectId}", {
+      params: { path: { projectId: project.id } },
+    });
+    if (error) {
+      toast(errorMessage(error, "Couldn't delete project"), "error");
+      return;
+    }
+    reload();
+    refreshCounts();
+    if (selectedId === project.id) router.push("/projects");
+  };
 
   return (
     <div className="flex flex-1 items-start">
@@ -76,6 +131,8 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
               selectedId={selectedId}
               showInactive={showInactive}
               onToggleInactive={setShowInactive}
+              onSetStatus={setStatus}
+              onDelete={deleteProject}
             />
           )}
         </div>
@@ -83,7 +140,7 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
       {selectedId ? (
         <div className="flex-1 min-w-0 flex items-start">
           <ProjectView
-            key={selectedId}
+            key={`${selectedId}:${version}`}
             projectId={selectedId}
             projects={activeProjects}
             tags={tags}

@@ -8,6 +8,7 @@ import type {
   Task,
   UpdateProjectRequest,
 } from "@/lib/types";
+import { applyOrder } from "@/lib/availability";
 import { useCounts } from "@/contexts/CountsContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -147,11 +148,33 @@ export default function ProjectView({
       let tasks = d.tasks;
       if (belongs && exists)
         tasks = d.tasks.map((t) => (t.id === task.id ? task : t));
-      else if (belongs) tasks = [task, ...d.tasks];
+      else if (belongs) tasks = [...d.tasks, task];
       else tasks = d.tasks.filter((t) => t.id !== task.id);
       return { ...d, tasks };
     });
     setSelected((s) => (s && s.id === task.id ? task : s));
+  };
+
+  const reorder = async (ids: string[]) => {
+    if (!detail) return;
+    const before = detail.tasks;
+    setDetail((d) => (d ? { ...d, tasks: applyOrder(d.tasks, ids) } : d));
+    const { data, error } = await apiClient.POST("/api/tasks/reorder", {
+      body: { task_ids: ids },
+    });
+    if (error || !data) {
+      setDetail((d) => (d ? { ...d, tasks: before } : d));
+      toast(errorMessage(error, "Couldn't reorder tasks"), "error");
+      return;
+    }
+    // The response carries fresh availability (sequential projects shift
+    // which task is first).
+    const fresh = new Map(data.map((t) => [t.id, t]));
+    setDetail((d) =>
+      d ? { ...d, tasks: d.tasks.map((t) => fresh.get(t.id) ?? t) } : d,
+    );
+    setSelected((s) => (s && fresh.get(s.id)) || s);
+    refreshProjectCounts();
   };
 
   const refreshProjectCounts = useCallback(async () => {
@@ -280,7 +303,6 @@ export default function ProjectView({
             placeholder={`Add a task to ${project.name}…`}
             onCreated={(t) => {
               updateTask(t);
-              setSelected(t);
               refreshProjectCounts();
             }}
           />
@@ -293,6 +315,8 @@ export default function ProjectView({
             }
             projects={projects}
             hideProject
+            numbered={project.sequential}
+            onReorder={reorder}
             selectedId={selected?.id ?? null}
             onSelect={setSelected}
             onUpdated={(t) => {

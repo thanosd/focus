@@ -4,7 +4,7 @@ import { apiClient, errorMessage } from "@/lib/api-client";
 import type { Task } from "@/lib/types";
 import { useCounts } from "@/contexts/CountsContext";
 import { useToast } from "@/contexts/ToastContext";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +16,11 @@ interface QuickAddProps {
   onCreated: (task: Task) => void;
 }
 
-/** Inline "type a title, press Enter" task creation bar. */
+/**
+ * Inline "type a title, press Enter" task creation bar. Enter saves, clears
+ * the field and keeps focus so the next capture can start immediately; it
+ * never opens the created task.
+ */
 export default function QuickAdd({
   projectId,
   tagIds,
@@ -26,6 +30,7 @@ export default function QuickAdd({
 }: QuickAddProps) {
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { refreshCounts } = useCounts();
   const { toast } = useToast();
 
@@ -49,6 +54,7 @@ export default function QuickAdd({
     setTitle("");
     onCreated(data);
     refreshCounts();
+    inputRef.current?.focus();
   };
 
   return (
@@ -61,12 +67,13 @@ export default function QuickAdd({
     >
       <Plus className="w-4 h-4 text-gray-400 flex-shrink-0" />
       <input
+        ref={inputRef}
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder={placeholder}
         className="flex-1 outline-none text-sm text-gray-900 placeholder:text-gray-400 bg-transparent"
-        disabled={busy}
+        readOnly={busy}
       />
       {title.trim() && (
         <Button type="submit" variant="primary" size="xs" disabled={busy}>

@@ -1,8 +1,11 @@
 "use client";
 
 import type { Task } from "@/lib/types";
+import { apiClient, errorMessage } from "@/lib/api-client";
+import { applyOrder } from "@/lib/availability";
 import { useProjectsAndTags } from "@/hooks/useProjectsAndTags";
 import { useTasks, type TaskQuery } from "@/hooks/useTasks";
+import { useToast } from "@/contexts/ToastContext";
 import { useCallback, useState } from "react";
 import TaskList from "@/components/TaskList";
 import TaskInspector from "@/components/TaskInspector";
@@ -21,6 +24,8 @@ interface TaskWorkspaceProps {
   /** Decide whether an updated task still belongs in this list. */
   keep?: (task: Task) => boolean;
   headerExtra?: React.ReactNode;
+  /** Allow drag-and-drop reordering (inbox). */
+  sortable?: boolean;
 }
 
 /**
@@ -37,10 +42,31 @@ export default function TaskWorkspace({
   hideProject,
   keep,
   headerExtra,
+  sortable = false,
 }: TaskWorkspaceProps) {
-  const { tasks, loading, error, upsert, remove, prepend } = useTasks(query);
+  const { tasks, loading, error, upsert, remove, append, setTasks } =
+    useTasks(query);
   const { projects, tags, addTag } = useProjectsAndTags();
+  const { toast } = useToast();
   const [selected, setSelected] = useState<Task | null>(null);
+
+  const reorder = useCallback(
+    async (ids: string[]) => {
+      const before = tasks;
+      setTasks((list) => applyOrder(list, ids));
+      const { data, error } = await apiClient.POST("/api/tasks/reorder", {
+        body: { task_ids: ids },
+      });
+      if (error || !data) {
+        setTasks(before);
+        toast(errorMessage(error, "Couldn't reorder tasks"), "error");
+        return;
+      }
+      const fresh = new Map(data.map((t) => [t.id, t]));
+      setTasks((list) => list.map((t) => fresh.get(t.id) ?? t));
+    },
+    [tasks, setTasks, toast],
+  );
 
   const handleUpdated = useCallback(
     (task: Task) => {
@@ -57,9 +83,9 @@ export default function TaskWorkspace({
       // the user can reopen it if the click was a mistake.
       upsert(task, query.view === "completed" || query.view === "all");
       setSelected((s) => (s && s.id === task.id ? task : s));
-      if (next && (keep ? keep(next) : true)) prepend(next);
+      if (next && (keep ? keep(next) : true)) append(next);
     },
-    [keep, prepend, upsert, query.view],
+    [keep, append, upsert, query.view],
   );
 
   const handleDeleted = useCallback(
@@ -90,10 +116,7 @@ export default function TaskWorkspace({
               projectId={quickAdd?.projectId}
               tagIds={quickAdd?.tagIds}
               flagged={quickAdd?.flagged}
-              onCreated={(t) => {
-                prepend(t);
-                setSelected(t);
-              }}
+              onCreated={append}
             />
           </div>
           <TaskList
@@ -105,6 +128,7 @@ export default function TaskWorkspace({
             showProjectPicker={showProjectPicker}
             hideProject={hideProject}
             selectedId={selected?.id ?? null}
+            onReorder={sortable ? reorder : undefined}
             onSelect={setSelected}
             onUpdated={handleUpdated}
             onCompleted={handleCompleted}
