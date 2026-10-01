@@ -284,7 +284,8 @@ func (r *TaskRepo) Counts(ctx context.Context, userID string, now time.Time) (*d
 		  (SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status = 'active' AND flagged),
 		  (SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status = 'active' AND due_at IS NOT NULL AND due_at > $2 AND due_at <= $2 + INTERVAL '24 hours'),
 		  (SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status = 'active' AND due_at IS NOT NULL AND due_at <= $2),
-		  (SELECT COUNT(*) FROM projects WHERE user_id = $1 AND status IN ('active', 'on_hold') AND next_review_at IS NOT NULL AND next_review_at <= $2)`,
+		  (SELECT COUNT(*) FROM projects p WHERE p.user_id = $1 AND p.status IN ('active', 'on_hold') AND p.next_review_at IS NOT NULL AND p.next_review_at <= $2
+		     AND `+reviewableCondition+`)`,
 		userID, now).Scan(&c.Inbox, &c.Flagged, &c.DueSoon, &c.Overdue, &c.ReviewDue)
 	if err != nil {
 		return nil, err

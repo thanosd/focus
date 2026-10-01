@@ -1496,7 +1496,7 @@ components:
         parent_id:
           type: string
           format: uuid
-          description: Set for second-level projects; null for top-level projects
+          description: Parent project; null for top-level projects (buckets)
         name:
           type: string
         note:
@@ -1517,7 +1517,7 @@ components:
           format: date-time
         depth:
           type: integer
-          description: 0 for top-level, 1 for nested
+          description: 0 for top-level buckets, 1 for projects inside a bucket, 2 for sub-projects (three levels max)
         sort_order:
           type: integer
         remaining_task_count:
@@ -1562,7 +1562,7 @@ components:
         parent_id:
           type: string
           format: uuid
-          description: Parent project; must itself be top-level (two levels max)
+          description: Parent project (three levels max; the parent must be at depth 0 or 1)
         sequential:
           type: boolean
         review_interval_days:

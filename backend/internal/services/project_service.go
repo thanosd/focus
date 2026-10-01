@@ -84,14 +84,14 @@ type CreateProjectInput struct {
 	ReviewIntervalDays int
 }
 
-// Create adds a project, enforcing the two-level nesting limit.
+// Create adds a project, enforcing the nesting limit (MaxDepth).
 func (s *ProjectService) Create(ctx context.Context, userID string, in CreateProjectInput) (*domain.Project, error) {
 	name := strings.TrimSpace(in.Name)
 	if name == "" {
 		return nil, fmt.Errorf("%w: name is required", domain.ErrValidation)
 	}
 	if in.ParentID != nil {
-		if err := s.checkParent(ctx, userID, *in.ParentID, ""); err != nil {
+		if err := s.checkParent(ctx, userID, *in.ParentID, "", 0); err != nil {
 			return nil, err
 		}
 	}
@@ -112,9 +112,15 @@ func (s *ProjectService) Create(ctx context.Context, userID string, in CreatePro
 	return s.Get(ctx, userID, p.ID)
 }
 
-// checkParent verifies a prospective parent exists, is top-level, and
-// (when re-parenting) isn't the project itself.
-func (s *ProjectService) checkParent(ctx context.Context, userID, parentID, selfID string) error {
+// MaxDepth is the deepest allowed project level (0 = top). Three levels
+// total: bucket ("Personal"), project, sub-project.
+const MaxDepth = 2
+
+// checkParent verifies a prospective parent exists, isn't the project
+// itself (or inside its own subtree), and that the whole subtree being
+// moved still fits within MaxDepth. subtreeDepth is how many levels of
+// descendants the moving project has (0 for a leaf).
+func (s *ProjectService) checkParent(ctx context.Context, userID, parentID, selfID string, subtreeDepth int) error {
 	if parentID == selfID {
 		return fmt.Errorf("%w: a project cannot be its own parent", domain.ErrValidation)
 	}
@@ -125,10 +131,41 @@ func (s *ProjectService) checkParent(ctx context.Context, userID, parentID, self
 	if parent == nil {
 		return fmt.Errorf("%w: parent project not found", domain.ErrValidation)
 	}
-	if parent.ParentID != nil {
-		return fmt.Errorf("%w: projects can only be nested two levels deep", domain.ErrValidation)
+	if selfID != "" {
+		// Walk up from the parent to make sure we're not nesting under a descendant.
+		for cur := parent; cur != nil && cur.ParentID != nil; {
+			if *cur.ParentID == selfID {
+				return fmt.Errorf("%w: a project cannot be moved inside its own sub-projects", domain.ErrValidation)
+			}
+			cur, err = s.projects.GetByID(ctx, userID, *cur.ParentID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if parent.Depth+1+subtreeDepth > MaxDepth {
+		return fmt.Errorf("%w: projects can only be nested %d levels deep", domain.ErrValidation, MaxDepth+1)
 	}
 	return nil
+}
+
+// subtreeDepth reports how many levels of sub-projects hang below id.
+func (s *ProjectService) subtreeDepth(ctx context.Context, userID, id string) (int, error) {
+	children, err := s.projects.ListChildren(ctx, userID, id)
+	if err != nil {
+		return 0, err
+	}
+	deepest := 0
+	for _, c := range children {
+		d, err := s.subtreeDepth(ctx, userID, c.ID)
+		if err != nil {
+			return 0, err
+		}
+		if d+1 > deepest {
+			deepest = d + 1
+		}
+	}
+	return deepest, nil
 }
 
 // ProjectPatch is a partial update. SetParent distinguishes "unset" from "null".
@@ -161,16 +198,12 @@ func (s *ProjectService) Update(ctx context.Context, userID, id string, p Projec
 	}
 	if p.SetParent {
 		if p.ParentID != nil {
-			if err := s.checkParent(ctx, userID, *p.ParentID, id); err != nil {
-				return nil, err
-			}
-			// A project with children cannot become a child itself.
-			children, err := s.projects.ListChildren(ctx, userID, id)
+			depth, err := s.subtreeDepth(ctx, userID, id)
 			if err != nil {
 				return nil, err
 			}
-			if len(children) > 0 {
-				return nil, fmt.Errorf("%w: this project has sub-projects and cannot be nested", domain.ErrValidation)
+			if err := s.checkParent(ctx, userID, *p.ParentID, id, depth); err != nil {
+				return nil, err
 			}
 		}
 		proj.ParentID = p.ParentID

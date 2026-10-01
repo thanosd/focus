@@ -4,7 +4,7 @@ A personal task manager in the spirit of OmniFocus, built for the Cosmic
 Teacups Kubernetes cluster.
 
 - **Inbox** for fast capture, then clean up later
-- **Projects** nested up to two levels, sequential or parallel, with
+- **Projects** nested up to three levels (bucket > project > sub-project), sequential or parallel, with
   **review mode** so nothing goes stale
 - **Tags** that cut across projects
 - **Flagged** (urgent) tasks that stand out

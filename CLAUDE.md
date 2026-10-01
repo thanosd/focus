@@ -1,7 +1,7 @@
 # Focus
 
 Personal task manager in the spirit of OmniFocus: inbox capture, projects
-nested two levels, tags, flagged (urgent) tasks, deferral with
+nested three levels, tags, flagged (urgent) tasks, deferral with
 natural-language dates, due dates, repeats, and a periodic review mode.
 Google sign-in (email allowlist) and an MCP server so Claude can use it.
 
@@ -103,7 +103,9 @@ focus/
 - **Available** = active, `defer_until` is null or past, project is active, and
   for sequential projects it is the first active task in sort order. Computed
   in SQL (`backend/internal/adapters/postgres_tasks.go`) so every view agrees.
-- Projects nest **two levels max**; the service rejects deeper parents.
+- Projects nest **three levels max** (bucket > project > sub-project); the service
+  rejects deeper parents and re-parents that would push a subtree past the limit.
+  Pure containers (children, no own tasks) are skipped by review mode.
 - Completing a task with a `repeat_rule` creates the next occurrence
   (`from: completion` shifts from now; `from: due` shifts the previous dates).
 - Reviews: `next_review_at <= now` on an active/on-hold project means due.

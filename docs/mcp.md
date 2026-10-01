@@ -30,7 +30,7 @@ services as the web UI.
 | `defer_task`                                | Natural language: "1w", "next monday", "in 3 days", "mid october"                                                        |
 | `list_projects`                             | Flat list with `parent_id`, counts, review dates                                                                         |
 | `get_project`                               | Project + active tasks + children                                                                                        |
-| `create_project`                            | Optional parent (name or id), sequential, review interval                                                                |
+| `create_project`                            | Optional parent (name or id; 3 levels max), sequential, review interval                                                  |
 | `update_project`                            | Name, note, status, sequential, review interval                                                                          |
 | `list_reviews`                              | Due and upcoming reviews                                                                                                 |
 | `mark_project_reviewed`                     |                                                                                                                          |

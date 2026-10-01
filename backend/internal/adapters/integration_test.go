@@ -81,7 +81,7 @@ func TestRepositoriesAndServices(t *testing.T) {
 		t.Fatal("revoked token should not resolve")
 	}
 
-	// Projects: two-level nesting
+	// Projects: three-level nesting
 	parser := dateparse.NewParser(nil)
 	taskSvc := services.NewTaskService(tasks, projects, parser)
 	projSvc := services.NewProjectService(projects, tasks)
@@ -98,8 +98,34 @@ func TestRepositoriesAndServices(t *testing.T) {
 	if kitchen.Depth != 1 {
 		t.Fatalf("expected depth 1, got %d", kitchen.Depth)
 	}
-	if _, err := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Too deep", ParentID: &kitchen.ID}); err == nil {
-		t.Fatal("third level should be rejected")
+	// Three levels: bucket > project > sub-project, but no deeper.
+	cabinets, err := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Cabinets", ParentID: &kitchen.ID})
+	if err != nil {
+		t.Fatalf("third level should be allowed: %v", err)
+	}
+	if cabinets.Depth != 2 {
+		t.Fatalf("expected depth 2, got %d", cabinets.Depth)
+	}
+	if _, err := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Too deep", ParentID: &cabinets.ID}); err == nil {
+		t.Fatal("fourth level should be rejected")
+	}
+	// Moving a project that has children under a depth-1 parent would push them past the limit.
+	if _, err := projSvc.Update(ctx, user.ID, home.ID, services.ProjectPatch{SetParent: true, ParentID: &kitchen.ID}); err == nil {
+		t.Fatal("re-parenting into own subtree / beyond depth should be rejected")
+	}
+	other, _ := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Other bucket"})
+	if _, err := projSvc.Update(ctx, user.ID, home.ID, services.ProjectPatch{SetParent: true, ParentID: &other.ID}); err == nil {
+		t.Fatal("home has two levels below it; nesting it would make four levels")
+	}
+	if _, err := projSvc.Update(ctx, user.ID, cabinets.ID, services.ProjectPatch{SetParent: true, ParentID: &other.ID}); err != nil {
+		t.Fatalf("moving a leaf under a top-level bucket should work: %v", err)
+	}
+	if _, err := projSvc.Update(ctx, user.ID, cabinets.ID, services.ProjectPatch{SetParent: true, ParentID: &kitchen.ID}); err != nil {
+		t.Fatalf("moving it back should work: %v", err)
+	}
+	// A pure container (children, no direct tasks) is skipped by review mode.
+	if err := projSvc.Delete(ctx, user.ID, other.ID); err != nil {
+		t.Fatal(err)
 	}
 
 	// Tags
@@ -245,8 +271,10 @@ func TestRepositoriesAndServices(t *testing.T) {
 	}
 
 	// Reviews: nothing due yet; force one due then mark reviewed
+	// home has direct tasks (reviewable); kitchen holds a task + cabinets (reviewable);
+	// cabinets is an empty leaf (reviewable) → 3 upcoming. Then make home a pure container.
 	dueList, upcoming, err := projSvc.Reviews(ctx, user.ID)
-	if err != nil || len(dueList) != 0 || len(upcoming) != 2 {
+	if err != nil || len(dueList) != 0 || len(upcoming) != 3 {
 		t.Fatalf("reviews: due=%d upcoming=%d err=%v", len(dueList), len(upcoming), err)
 	}
 	past := time.Now().Add(-time.Hour)
@@ -285,5 +313,32 @@ func TestRepositoriesAndServices(t *testing.T) {
 	}
 	if _, err := projSvc.Get(ctx, user.ID, kitchen.ID); err != domain.ErrNotFound {
 		t.Fatalf("child project should cascade: %v", err)
+	}
+
+	// Pure containers are not reviewed: a bucket with only sub-projects stays out of the queue.
+	bucket, _ := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Personal"})
+	leaf, _ := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Garden", ParentID: &bucket.ID})
+	past2 := time.Now().Add(-time.Hour)
+	for _, id := range []string{bucket.ID, leaf.ID} {
+		pr, _ := projSvc.Get(ctx, user.ID, id)
+		pr.NextReviewAt = &past2
+		if err := projects.Update(ctx, pr); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dueList, _, _ = projSvc.Reviews(ctx, user.ID)
+	if len(dueList) != 1 || dueList[0].ID != leaf.ID {
+		t.Fatalf("only the leaf should be due for review, got %+v", dueList)
+	}
+	c, _ = taskSvc.Counts(ctx, user.ID)
+	if c.ReviewDue != 1 {
+		t.Fatalf("review_due should skip the container: %d", c.ReviewDue)
+	}
+	if _, err := taskSvc.Create(ctx, user.ID, services.CreateTaskInput{Title: "Bucket task", ProjectID: &bucket.ID}); err != nil {
+		t.Fatal(err)
+	}
+	dueList, _, _ = projSvc.Reviews(ctx, user.ID)
+	if len(dueList) != 2 {
+		t.Fatalf("a container with its own tasks becomes reviewable again: %d", len(dueList))
 	}
 }

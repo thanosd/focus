@@ -240,7 +240,7 @@ type CreateProjectRequest struct {
 	Name string  `json:"name"`
 	Note *string `json:"note,omitempty"`
 
-	// ParentId Parent project; must itself be top-level (two levels max)
+	// ParentId Parent project (three levels max; the parent must be at depth 0 or 1)
 	ParentId           *openapi_types.UUID `json:"parent_id,omitempty"`
 	ReviewIntervalDays *int                `json:"review_interval_days,omitempty"`
 	Sequential         *bool               `json:"sequential,omitempty"`
@@ -330,7 +330,7 @@ type Project struct {
 	CompletedAt        *time.Time `json:"completed_at,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 
-	// Depth 0 for top-level, 1 for nested
+	// Depth 0 for top-level buckets, 1 for projects inside a bucket, 2 for sub-projects (three levels max)
 	Depth          int                `json:"depth"`
 	Id             openapi_types.UUID `json:"id"`
 	LastReviewedAt *time.Time         `json:"last_reviewed_at,omitempty"`
@@ -338,7 +338,7 @@ type Project struct {
 	NextReviewAt   *time.Time         `json:"next_review_at,omitempty"`
 	Note           string             `json:"note"`
 
-	// ParentId Set for second-level projects; null for top-level projects
+	// ParentId Parent project; null for top-level projects (buckets)
 	ParentId           *openapi_types.UUID `json:"parent_id,omitempty"`
 	RemainingTaskCount int                 `json:"remaining_task_count"`
 	ReviewIntervalDays int                 `json:"review_interval_days"`

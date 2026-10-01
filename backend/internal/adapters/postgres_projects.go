@@ -26,7 +26,9 @@ func NewProjectRepository(db *sql.DB) ports.ProjectRepository { return &ProjectR
 const projectSelect = `
 SELECT p.id, p.user_id, p.parent_id, p.name, p.note, p.status, p.sequential,
        p.review_interval_days, p.last_reviewed_at, p.next_review_at,
-       CASE WHEN p.parent_id IS NULL THEN 0 ELSE 1 END AS depth,
+       CASE WHEN p.parent_id IS NULL THEN 0
+            WHEN (SELECT pp.parent_id FROM projects pp WHERE pp.id = p.parent_id) IS NULL THEN 1
+            ELSE 2 END AS depth,
        p.sort_order, p.completed_at, p.created_at, p.updated_at,
        (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'active') AS remaining_task_count,
        (SELECT COUNT(*) FROM tasks t
@@ -37,6 +39,12 @@ SELECT p.id, p.user_id, p.parent_id, p.name, p.note, p.status, p.sequential,
                 SELECT t2.id FROM tasks t2 WHERE t2.project_id = p.id AND t2.status = 'active'
                 ORDER BY t2.sort_order, t2.created_at LIMIT 1))) AS available_task_count
 FROM projects p`
+
+// reviewableCondition excludes pure containers — projects that only hold
+// sub-projects and no tasks of their own (the "Personal" / "Work" buckets).
+// Those are navigation, not commitments, so review mode skips them.
+const reviewableCondition = `(NOT EXISTS (SELECT 1 FROM projects c WHERE c.parent_id = p.id)
+	   OR EXISTS (SELECT 1 FROM tasks t WHERE t.project_id = p.id AND t.status = 'active'))`
 
 func scanProject(row interface{ Scan(...any) error }) (*domain.Project, error) {
 	var p domain.Project
@@ -149,6 +157,7 @@ func (r *ProjectRepo) Delete(ctx context.Context, userID, id string) error {
 func (r *ProjectRepo) ListReviewDue(ctx context.Context, userID string, now time.Time) ([]domain.Project, error) {
 	rows, err := r.db.QueryContext(ctx, projectSelect+`
 		WHERE p.user_id = $1 AND p.status IN ('active', 'on_hold') AND p.next_review_at IS NOT NULL AND p.next_review_at <= $2
+		  AND `+reviewableCondition+`
 		ORDER BY p.next_review_at ASC, p.created_at`, userID, now)
 	if err != nil {
 		return nil, err
@@ -160,6 +169,7 @@ func (r *ProjectRepo) ListReviewDue(ctx context.Context, userID string, now time
 func (r *ProjectRepo) ListReviewUpcoming(ctx context.Context, userID string, now time.Time) ([]domain.Project, error) {
 	rows, err := r.db.QueryContext(ctx, projectSelect+`
 		WHERE p.user_id = $1 AND p.status IN ('active', 'on_hold') AND (p.next_review_at IS NULL OR p.next_review_at > $2)
+		  AND `+reviewableCondition+`
 		ORDER BY p.next_review_at ASC NULLS LAST, p.created_at`, userID, now)
 	if err != nil {
 		return nil, err
@@ -170,6 +180,6 @@ func (r *ProjectRepo) ListReviewUpcoming(ctx context.Context, userID string, now
 // CountReviewDue counts overdue reviews.
 func (r *ProjectRepo) CountReviewDue(ctx context.Context, userID string, now time.Time) (int, error) {
 	var n int
-	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM projects WHERE user_id = $1 AND status IN ('active', 'on_hold') AND next_review_at IS NOT NULL AND next_review_at <= $2`, userID, now).Scan(&n)
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM projects p WHERE p.user_id = $1 AND p.status IN ('active', 'on_hold') AND p.next_review_at IS NOT NULL AND p.next_review_at <= $2 AND `+reviewableCondition, userID, now).Scan(&n)
 	return n, err
 }

@@ -664,7 +664,7 @@ export interface components {
             id: string;
             /**
              * Format: uuid
-             * @description Set for second-level projects; null for top-level projects
+             * @description Parent project; null for top-level projects (buckets)
              */
             parent_id?: string;
             name: string;
@@ -678,7 +678,7 @@ export interface components {
             last_reviewed_at?: string;
             /** Format: date-time */
             next_review_at?: string;
-            /** @description 0 for top-level, 1 for nested */
+            /** @description 0 for top-level buckets, 1 for projects inside a bucket, 2 for sub-projects (three levels max) */
             depth: number;
             sort_order: number;
             remaining_task_count: number;
@@ -700,7 +700,7 @@ export interface components {
             note?: string;
             /**
              * Format: uuid
-             * @description Parent project; must itself be top-level (two levels max)
+             * @description Parent project (three levels max; the parent must be at depth 0 or 1)
              */
             parent_id?: string;
             sequential?: boolean;

@@ -45,7 +45,7 @@ type Server struct {
 func New(deps Deps) *Server {
 	s := &Server{deps: deps}
 	s.server = mcp.NewServer(&mcp.Implementation{Name: "focus", Version: deps.Version}, &mcp.ServerOptions{
-		Instructions: "Focus is the user's personal task manager (OmniFocus-style). Tasks live in the inbox (no project) or in a project; projects nest two levels; tags cross-cut; flagged = urgent. Deferred tasks are hidden until defer_until. Use list_tasks with view=inbox to see unprocessed captures, view=available for what can be worked on now. Dates accept natural language (\"1w\", \"next monday\", \"in 3 days\").",
+		Instructions: "Focus is the user's personal task manager (OmniFocus-style). Tasks live in the inbox (no project) or in a project; projects nest up to three levels (bucket > project > sub-project; buckets like 'Personal' or 'Work' are just containers); tags cross-cut; flagged = urgent. Deferred tasks are hidden until defer_until. Use list_tasks with view=inbox to see unprocessed captures, view=available for what can be worked on now. Dates accept natural language (\"1w\", \"next monday\", \"in 3 days\").",
 	})
 	s.registerTools()
 	return s
@@ -232,7 +232,7 @@ type projectIDIn struct {
 type createProjectIn struct {
 	Name               string `json:"name" jsonschema:"Project name"`
 	Note               string `json:"note,omitempty"`
-	ParentID           string `json:"parent_id,omitempty" jsonschema:"Parent project ID (parent must be top-level; two levels max)"`
+	ParentID           string `json:"parent_id,omitempty" jsonschema:"Parent project ID (three levels max: bucket > project > sub-project)"`
 	Parent             string `json:"parent,omitempty" jsonschema:"Parent project name instead of parent_id"`
 	Sequential         bool   `json:"sequential,omitempty" jsonschema:"Only the first remaining task is available at a time"`
 	ReviewIntervalDays int    `json:"review_interval_days,omitempty" jsonschema:"How often to review (default 7)"`
@@ -272,9 +272,9 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.server, &mcp.Tool{Name: "delete_task", Description: "Permanently delete a task."}, s.deleteTask)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "reorder_tasks", Description: "Set the order of tasks within a project or the inbox (first ID is first). In sequential projects the first active task is the available one."}, s.reorderTasks)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "defer_task", Description: "Defer a task until a date/time given in natural language (\"1w\", \"next monday\", \"in 3 days\", \"mid october\")."}, s.deferTask)
-	mcp.AddTool(s.server, &mcp.Tool{Name: "list_projects", Description: "List projects with their parent_id (two-level tree), status, review dates and task counts."}, s.listProjects)
+	mcp.AddTool(s.server, &mcp.Tool{Name: "list_projects", Description: "List projects with their parent_id (up to three levels: bucket > project > sub-project), status, review dates and task counts."}, s.listProjects)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "get_project", Description: "Get a project with its active tasks and sub-projects."}, s.getProject)
-	mcp.AddTool(s.server, &mcp.Tool{Name: "create_project", Description: "Create a project, optionally nested under a top-level parent."}, s.createProject)
+	mcp.AddTool(s.server, &mcp.Tool{Name: "create_project", Description: "Create a project, optionally nested under a parent (three levels max)."}, s.createProject)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "update_project", Description: "Rename a project, change its note, status (active/on_hold/completed/dropped), sequential flag or review interval."}, s.updateProject)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "list_reviews", Description: "List projects that are due for review (oldest first) and the upcoming review schedule."}, s.listReviews)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "mark_project_reviewed", Description: "Mark a project as reviewed now and schedule its next review."}, s.markReviewed)

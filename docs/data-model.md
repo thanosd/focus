@@ -10,7 +10,7 @@ Schema of record: `backend/migrations/`. This is the orientation.
 | `sessions`     | Browser sessions (30 days)                                                         |
 | `oauth_states` | Sign-in nonces (10 minutes)                                                        |
 | `api_tokens`   | MCP bearer tokens — only `token_hash` (SHA-256) is stored                          |
-| `projects`     | `parent_id` for nesting, `status`, `sequential`, review fields                     |
+| `projects`     | `parent_id` for nesting (3 levels), `status`, `sequential`, review fields          |
 | `tasks`        | `project_id` NULL = inbox; `flagged`, `defer_until`, `due_at`, `repeat_rule` JSONB |
 | `tags`         | Unique per `(user_id, name)`                                                       |
 | `task_tags`    | Many-to-many                                                                       |
@@ -64,12 +64,20 @@ created with the same title, note, project, flag and tags:
   keeps its gap. A weekly "Friday" task stays on Fridays however late you
   finish it.
 
+## Project levels
+
+Projects nest up to three levels: a top-level **bucket** ("Personal",
+"Work"), a project, and a sub-project. Any level may hold tasks; buckets
+usually don't. The service enforces the limit on create and re-parent,
+including the depth of the subtree being moved.
+
 ## Reviews
 
 Each project has `review_interval_days` (default 7) and `next_review_at`
 (initially creation + interval). `GET /api/reviews` returns active/on-hold
 projects with `next_review_at <= now` as **due** (oldest first) and the rest
-as **upcoming**. `POST /api/projects/{id}/review` stamps `last_reviewed_at`
+as **upcoming**. Pure containers (projects that have sub-projects and no
+tasks of their own) are skipped: they're navigation, not commitments. `POST /api/projects/{id}/review` stamps `last_reviewed_at`
 and sets `next_review_at = now + interval`.
 
 ## Dates and timezones

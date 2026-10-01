@@ -1,5 +1,5 @@
--- Projects nest at most two levels deep (parent_id of a parent must be
--- NULL); the service layer enforces the depth, the schema just stores it.
+-- Projects nest up to three levels deep (bucket > project > sub-project);
+-- the service layer enforces the depth, the schema just stores parent_id.
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
