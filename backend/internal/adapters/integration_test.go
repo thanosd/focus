@@ -12,8 +12,6 @@ import (
 	"github.com/thanosd/focus/backend/internal/testdb"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 func TestRepositoriesAndServices(t *testing.T) {
 	db := testdb.Open(t)
 	ctx := context.Background()

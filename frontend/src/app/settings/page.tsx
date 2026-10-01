@@ -97,7 +97,11 @@ function SettingsContent() {
   };
 
   const revoke = async (token: ApiToken) => {
-    if (!window.confirm(`Revoke "${token.name}"? Clients using it will stop working.`))
+    if (
+      !window.confirm(
+        `Revoke "${token.name}"? Clients using it will stop working.`,
+      )
+    )
       return;
     const { error } = await apiClient.DELETE("/api/api-tokens/{tokenId}", {
       params: { path: { tokenId: token.id } },
@@ -133,8 +137,9 @@ function SettingsContent() {
       <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-1">Timezone</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Used to display dates and to resolve phrases like &ldquo;tomorrow&rdquo;
-          or &ldquo;next Monday&rdquo; when deferring tasks.
+          Used to display dates and to resolve phrases like
+          &ldquo;tomorrow&rdquo; or &ldquo;next Monday&rdquo; when deferring
+          tasks.
         </p>
         <div className="flex items-center gap-3">
           <select
@@ -213,9 +218,14 @@ function SettingsContent() {
         ) : (
           <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
             {tokens.map((t) => (
-              <div key={t.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+              <div
+                key={t.id}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm"
+              >
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">{t.name}</div>
+                  <div className="font-medium text-gray-900 truncate">
+                    {t.name}
+                  </div>
                   <div className="text-xs text-gray-500">
                     <code>{t.token_prefix}…</code> · created{" "}
                     {dayLabel(t.created_at, timezone)}

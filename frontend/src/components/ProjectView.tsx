@@ -139,7 +139,8 @@ export default function ProjectView({
       const belongs = task.project_id === projectId;
       const exists = d.tasks.some((t) => t.id === task.id);
       let tasks = d.tasks;
-      if (belongs && exists) tasks = d.tasks.map((t) => (t.id === task.id ? task : t));
+      if (belongs && exists)
+        tasks = d.tasks.map((t) => (t.id === task.id ? task : t));
       else if (belongs) tasks = [task, ...d.tasks];
       else tasks = d.tasks.filter((t) => t.id !== task.id);
       return { ...d, tasks };
@@ -159,7 +160,9 @@ export default function ProjectView({
       params: { path: { projectId } },
     });
     if (data) {
-      setDetail((d) => (d ? { ...d, project: data.project, children: data.children } : d));
+      setDetail((d) =>
+        d ? { ...d, project: data.project, children: data.children } : d,
+      );
       onProjectChanged(data.project);
     }
   };
@@ -182,7 +185,9 @@ export default function ProjectView({
   const visibleTasks = showDone
     ? detail.tasks
     : detail.tasks.filter((t) => t.status === "active");
-  const doneCount = detail.tasks.length - detail.tasks.filter((t) => t.status === "active").length;
+  const doneCount =
+    detail.tasks.length -
+    detail.tasks.filter((t) => t.status === "active").length;
 
   return (
     <div className="space-y-4">
@@ -274,15 +279,25 @@ export default function ProjectView({
               <select
                 value=""
                 disabled={busy || children.length > 0}
-                title={children.length > 0 ? "Projects with sub-projects must stay top-level" : undefined}
+                title={
+                  children.length > 0
+                    ? "Projects with sub-projects must stay top-level"
+                    : undefined
+                }
                 onChange={(e) => {
-                  if (e.target.value) patchProject({ parent_id: e.target.value });
+                  if (e.target.value)
+                    patchProject({ parent_id: e.target.value });
                 }}
                 className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
               >
                 <option value="">Top-level</option>
                 {projects
-                  .filter((p) => !p.parent_id && p.id !== project.id && p.status === "active")
+                  .filter(
+                    (p) =>
+                      !p.parent_id &&
+                      p.id !== project.id &&
+                      p.status === "active",
+                  )
                   .map((p) => (
                     <option key={p.id} value={p.id}>
                       Move under {p.name}
@@ -402,7 +417,9 @@ export default function ProjectView({
           }}
           onCompleted={completeTask}
           onDeleted={(id) => {
-            setDetail((d) => (d ? { ...d, tasks: d.tasks.filter((t) => t.id !== id) } : d));
+            setDetail((d) =>
+              d ? { ...d, tasks: d.tasks.filter((t) => t.id !== id) } : d,
+            );
             setSelected(null);
             refreshProjectCounts();
           }}

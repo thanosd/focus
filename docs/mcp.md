@@ -19,24 +19,24 @@ services as the web UI.
 
 ## Tools
 
-| Tool                    | What it does                                                        |
-| ----------------------- | ------------------------------------------------------------------- |
-| `list_tasks`            | Views: `inbox`, `available` (default), `flagged`, `due`, `completed`, `all`; filter by project (name or id), tag, search |
-| `get_task`              | Full task                                                           |
-| `create_task`           | Title, note, project (name or id), flagged, `defer`, `due`, `repeat`, tag names (auto-created) |
-| `update_task`           | Partial update; empty string clears a date/repeat; `project: "inbox"` moves back |
-| `complete_task`         | Completes; returns `next_task` for repeats                          |
-| `drop_task` / `reopen_task` / `delete_task` |                                                 |
-| `defer_task`            | Natural language: "1w", "next monday", "in 3 days", "mid october"   |
-| `list_projects`         | Flat list with `parent_id`, counts, review dates                    |
-| `get_project`           | Project + active tasks + children                                   |
-| `create_project`        | Optional parent (name or id), sequential, review interval           |
-| `update_project`        | Name, note, status, sequential, review interval                     |
-| `list_reviews`          | Due and upcoming reviews                                            |
-| `mark_project_reviewed` |                                                                     |
-| `list_tags` / `create_tag` |                                                                  |
-| `parse_date`            | Resolve a phrase without changing anything                          |
-| `get_counts`            | Badge counts                                                        |
+| Tool                                        | What it does                                                                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `list_tasks`                                | Views: `inbox`, `available` (default), `flagged`, `due`, `completed`, `all`; filter by project (name or id), tag, search |
+| `get_task`                                  | Full task                                                                                                                |
+| `create_task`                               | Title, note, project (name or id), flagged, `defer`, `due`, `repeat`, tag names (auto-created)                           |
+| `update_task`                               | Partial update; empty string clears a date/repeat; `project: "inbox"` moves back                                         |
+| `complete_task`                             | Completes; returns `next_task` for repeats                                                                               |
+| `drop_task` / `reopen_task` / `delete_task` |                                                                                                                          |
+| `defer_task`                                | Natural language: "1w", "next monday", "in 3 days", "mid october"                                                        |
+| `list_projects`                             | Flat list with `parent_id`, counts, review dates                                                                         |
+| `get_project`                               | Project + active tasks + children                                                                                        |
+| `create_project`                            | Optional parent (name or id), sequential, review interval                                                                |
+| `update_project`                            | Name, note, status, sequential, review interval                                                                          |
+| `list_reviews`                              | Due and upcoming reviews                                                                                                 |
+| `mark_project_reviewed`                     |                                                                                                                          |
+| `list_tags` / `create_tag`                  |                                                                                                                          |
+| `parse_date`                                | Resolve a phrase without changing anything                                                                               |
+| `get_counts`                                | Badge counts                                                                                                             |
 
 Dates in `create_task` / `update_task` / `defer_task` accept natural
 language or RFC 3339. Repeat rules accept "every 2 weeks", "monthly from

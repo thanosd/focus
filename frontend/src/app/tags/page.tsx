@@ -71,7 +71,9 @@ function TagsContent() {
   };
 
   const del = async (tag: Tag) => {
-    if (!window.confirm(`Delete tag "${tag.name}"? Tasks keep their other tags.`))
+    if (
+      !window.confirm(`Delete tag "${tag.name}"? Tasks keep their other tags.`)
+    )
       return;
     const { error } = await apiClient.DELETE("/api/tags/{tagId}", {
       params: { path: { tagId: tag.id } },
@@ -163,7 +165,10 @@ function TagsContent() {
                 </>
               ) : (
                 <>
-                  <Link href={`/tags/${tag.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                  <Link
+                    href={`/tags/${tag.id}`}
+                    className="flex items-center gap-3 flex-1 min-w-0"
+                  >
                     <TagChip tag={tag} size="md" />
                     <span className="text-xs text-gray-500">
                       {tag.active_task_count ?? 0} active

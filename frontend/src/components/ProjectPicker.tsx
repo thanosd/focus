@@ -23,7 +23,9 @@ export default function ProjectPicker({
   compact = false,
 }: ProjectPickerProps) {
   const options = projectOptions(
-    projects.filter((p) => p.status === "active" || p.status === "on_hold" || p.id === value),
+    projects.filter(
+      (p) => p.status === "active" || p.status === "on_hold" || p.id === value,
+    ),
   );
   return (
     <select
@@ -40,7 +42,9 @@ export default function ProjectPicker({
         <option key={project.id} value={project.id}>
           {depth > 0 ? "    ↳ " : ""}
           {project.name}
-          {project.status !== "active" ? ` (${project.status.replace("_", " ")})` : ""}
+          {project.status !== "active"
+            ? ` (${project.status.replace("_", " ")})`
+            : ""}
         </option>
       ))}
     </select>

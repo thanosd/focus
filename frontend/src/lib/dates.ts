@@ -20,14 +20,20 @@ export function dayLabel(iso: string, tz: string): string {
   if (diff === -1) return "Yesterday";
   if (diff > 1 && diff < 7) return formatInTimeZone(new Date(iso), tz, "EEEE");
   const sameYear = then.getFullYear() === now.getFullYear();
-  return formatInTimeZone(new Date(iso), tz, sameYear ? "MMM d" : "MMM d, yyyy");
+  return formatInTimeZone(
+    new Date(iso),
+    tz,
+    sameYear ? "MMM d" : "MMM d, yyyy",
+  );
 }
 
 /** Date + time label, omitting midnight. */
 export function dateTimeLabel(iso: string, tz: string): string {
   const time = formatInTimeZone(new Date(iso), tz, "HH:mm");
   const day = dayLabel(iso, tz);
-  return time === "00:00" ? day : `${day} ${formatInTimeZone(new Date(iso), tz, "h:mm a")}`;
+  return time === "00:00"
+    ? day
+    : `${day} ${formatInTimeZone(new Date(iso), tz, "h:mm a")}`;
 }
 
 export function isPast(iso: string): boolean {

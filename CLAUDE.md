@@ -54,23 +54,24 @@ ESLint bans raw `fetch()` in the frontend — use `apiClient`.
 Required env vars are validated at startup via `config.MustHave(...)` in
 `backend/cmd/focus/main.go`, not at first use. When you add a new required
 env var, add it there AND to the Helm chart (`k8s/focus/templates/secrets.yaml`
-+ the deployment env block) AND to `docs/deploy/setup-checklist.md`.
+
+- the deployment env block) AND to `docs/deploy/setup-checklist.md`.
 
 ## Key Commands
 
-| Command              | Description                                          |
-| -------------------- | ---------------------------------------------------- |
-| `make all`           | Run all checks (format, lint, build, test, types)    |
-| `make fast`          | Fast gate: format + lint + types + build             |
-| `make build`         | Build Go backend                                     |
-| `make test`          | Run Go tests (unit + embedded-Postgres integration)  |
-| `make types`         | TypeScript type check                                |
-| `make lint-frontend` | ESLint                                               |
-| `make generate`      | Regenerate API types from the OpenAPI spec           |
-| `make dc-up`         | Start devcontainer (Postgres + Temporal)             |
-| `make dc-migrate`    | Run database migrations in devcontainer              |
-| `make dc-backend`    | Run server + worker with hot reload in devcontainer  |
-| `make dc-frontend`   | Run the Next.js dev server in devcontainer           |
+| Command              | Description                                         |
+| -------------------- | --------------------------------------------------- |
+| `make all`           | Run all checks (format, lint, build, test, types)   |
+| `make fast`          | Fast gate: format + lint + types + build            |
+| `make build`         | Build Go backend                                    |
+| `make test`          | Run Go tests (unit + embedded-Postgres integration) |
+| `make types`         | TypeScript type check                               |
+| `make lint-frontend` | ESLint                                              |
+| `make generate`      | Regenerate API types from the OpenAPI spec          |
+| `make dc-up`         | Start devcontainer (Postgres + Temporal)            |
+| `make dc-migrate`    | Run database migrations in devcontainer             |
+| `make dc-backend`    | Run server + worker with hot reload in devcontainer |
+| `make dc-frontend`   | Run the Next.js dev server in devcontainer          |
 
 ## Project Structure
 

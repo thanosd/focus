@@ -52,7 +52,8 @@ export default function TaskRow({
   const done = task.status === "completed";
   const dropped = task.status === "dropped";
   const deferred = !!task.defer_until && !isPast(task.defer_until);
-  const overdue = !!task.due_at && isPast(task.due_at) && task.status === "active";
+  const overdue =
+    !!task.due_at && isPast(task.due_at) && task.status === "active";
 
   const complete = async () => {
     if (busy) return;
@@ -81,9 +82,12 @@ export default function TaskRow({
       }
       onCompleted?.(data.task, data.next_task);
     } else {
-      const { data, error } = await apiClient.POST("/api/tasks/{taskId}/reopen", {
-        params: { path: { taskId: task.id } },
-      });
+      const { data, error } = await apiClient.POST(
+        "/api/tasks/{taskId}/reopen",
+        {
+          params: { path: { taskId: task.id } },
+        },
+      );
       setBusy(false);
       if (error || !data) {
         toast(errorMessage(error, "Couldn't reopen task"), "error");
@@ -238,7 +242,10 @@ export default function TaskRow({
             <ClockIcon className="w-4 h-4" />
           </button>
           {deferOpen && (
-            <div onClick={(e) => e.stopPropagation()} className="absolute right-0">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-0"
+            >
               <div className="relative -left-[19rem]">
                 <DeferMenu
                   task={task}

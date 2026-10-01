@@ -33,8 +33,7 @@ In <https://console.cloud.google.com/apis/credentials> (any GCP project):
 
 - [ ] Create a key in the Anthropic Console for the project → `CLAUDE_API_KEY`.
       Without it, deferral still works for every phrase the rule parser
-      knows; only unusual phrases ("after the board meeting") fail with a
-      400.
+      knows; only unusual phrases ("after the board meeting") fail with a 400.
 
 ## 4. AWS resources (Pulumi)
 
@@ -76,15 +75,15 @@ for the next two steps.
 One JSON object. The deploy workflow camelCases each key into Helm values
 (`DATABASE_URL` → `databaseUrl`). Required keys:
 
-| Key                                  | Value                                                                  |
-| ------------------------------------ | ---------------------------------------------------------------------- |
+| Key                                  | Value                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | `DATABASE_URL`                       | from bootstrap-db.sh: `postgresql://focus_production:<pw>@<rds>:5432/focus_production?sslmode=require` |
-| `GOOGLE_CLIENT_ID`                   | from step 2                                                            |
-| `GOOGLE_CLIENT_SECRET`               | from step 2                                                            |
-| `AUTH_ALLOWED_EMAILS`                | `thanos.diacakis@cosmicteacups.com` (comma-separate to add more)        |
-| `CSRF_AUTH_KEY`                      | `openssl rand -base64 32`                                              |
-| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | `openssl rand -base64 32` — must stay stable across deploys            |
-| `CLAUDE_API_KEY`                     | from step 3 (may be an empty string)                                   |
+| `GOOGLE_CLIENT_ID`                   | from step 2                                                                                            |
+| `GOOGLE_CLIENT_SECRET`               | from step 2                                                                                            |
+| `AUTH_ALLOWED_EMAILS`                | `thanos.diacakis@cosmicteacups.com` (comma-separate to add more)                                       |
+| `CSRF_AUTH_KEY`                      | `openssl rand -base64 32`                                                                              |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | `openssl rand -base64 32` — must stay stable across deploys                                            |
+| `CLAUDE_API_KEY`                     | from step 3 (may be an empty string)                                                                   |
 
 ```bash
 aws secretsmanager put-secret-value --profile cosmic \
@@ -127,15 +126,15 @@ auto-registers the `focus` Temporal namespace and the nightly schedule.
 
 ## Summary of named things
 
-| Kind                 | Name                                                |
-| -------------------- | --------------------------------------------------- |
-| GitHub repo          | `thanosd/focus`                                     |
-| Google OAuth client  | redirect `https://focus-api.cosmicteacups.com/api/auth/google/callback` |
-| IAM role             | `arn:aws:iam::131925870818:role/focus-deploy`       |
-| ECR                  | `focus-backend`, `focus-frontend`                   |
-| Secrets Manager      | `cosmic/focus/production`, `focus/temporal`         |
-| RDS databases        | `focus_production`, `focus_temporal`, `focus_temporal_visibility` |
-| K8s namespaces       | `focus`, `focus-temporal`                           |
-| ServiceAccount       | `focus`                                             |
-| DNS                  | `focus.cosmicteacups.com`, `focus-api.cosmicteacups.com` |
-| TLS secret           | `focus-tls` (cert-manager, `letsencrypt-prod`)      |
+| Kind                | Name                                                                    |
+| ------------------- | ----------------------------------------------------------------------- |
+| GitHub repo         | `thanosd/focus`                                                         |
+| Google OAuth client | redirect `https://focus-api.cosmicteacups.com/api/auth/google/callback` |
+| IAM role            | `arn:aws:iam::131925870818:role/focus-deploy`                           |
+| ECR                 | `focus-backend`, `focus-frontend`                                       |
+| Secrets Manager     | `cosmic/focus/production`, `focus/temporal`                             |
+| RDS databases       | `focus_production`, `focus_temporal`, `focus_temporal_visibility`       |
+| K8s namespaces      | `focus`, `focus-temporal`                                               |
+| ServiceAccount      | `focus`                                                                 |
+| DNS                 | `focus.cosmicteacups.com`, `focus-api.cosmicteacups.com`                |
+| TLS secret          | `focus-tls` (cert-manager, `letsencrypt-prod`)                          |

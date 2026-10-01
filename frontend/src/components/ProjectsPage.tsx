@@ -13,8 +13,13 @@ import { PlusIcon } from "@/components/Icons";
 
 function ProjectsContent({ selectedId }: { selectedId?: string }) {
   const router = useRouter();
-  const { projects: activeProjects, tags, loaded, reload, addTag } =
-    useProjectsAndTags();
+  const {
+    projects: activeProjects,
+    tags,
+    loaded,
+    reload,
+    addTag,
+  } = useProjectsAndTags();
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [creating, setCreating] = useState(false);

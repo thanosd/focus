@@ -7,20 +7,20 @@ projects feel the same to work on.
 
 ## Stack
 
-| Layer      | Choice                                                                  |
-| ---------- | ----------------------------------------------------------------------- |
-| Backend    | Go 1.26, `net/http` (Go 1.22+ method/path routing), `database/sql` + `lib/pq` |
-| Frontend   | Next.js 16 (App Router), React 18, Tailwind 3, `openapi-fetch`          |
-| Contract   | OpenAPI 3.1 (`api/`), generated with `oapi-codegen` and `openapi-typescript` |
-| Auth       | Google OIDC (`coreos/go-oidc` + `golang.org/x/oauth2`), server-side sessions |
-| CSRF       | `filippo.io/csrf/gorilla` (Fetch-metadata based)                        |
-| AI         | Anthropic Go SDK, Claude Opus 5, only for natural-language date parsing |
-| MCP        | `modelcontextprotocol/go-sdk`, streamable HTTP, bearer tokens           |
-| Workflows  | Temporal (`go.temporal.io/sdk`) — one nightly maintenance workflow      |
-| Database   | Postgres on the shared Cosmic RDS                                       |
-| Runtime    | EKS `cosmic-cluster`, namespace `focus`, arm64 (Graviton) node pool     |
-| IaC        | Pulumi (`infra/`), Helm (`k8s/focus/`)                                   |
-| CI/CD      | GitHub Actions; push to `main` → trunk/go/ts checks → ECR → `helm upgrade` |
+| Layer     | Choice                                                                        |
+| --------- | ----------------------------------------------------------------------------- |
+| Backend   | Go 1.26, `net/http` (Go 1.22+ method/path routing), `database/sql` + `lib/pq` |
+| Frontend  | Next.js 16 (App Router), React 18, Tailwind 3, `openapi-fetch`                |
+| Contract  | OpenAPI 3.1 (`api/`), generated with `oapi-codegen` and `openapi-typescript`  |
+| Auth      | Google OIDC (`coreos/go-oidc` + `golang.org/x/oauth2`), server-side sessions  |
+| CSRF      | `filippo.io/csrf/gorilla` (Fetch-metadata based)                              |
+| AI        | Anthropic Go SDK, Claude Opus 5, only for natural-language date parsing       |
+| MCP       | `modelcontextprotocol/go-sdk`, streamable HTTP, bearer tokens                 |
+| Workflows | Temporal (`go.temporal.io/sdk`) — one nightly maintenance workflow            |
+| Database  | Postgres on the shared Cosmic RDS                                             |
+| Runtime   | EKS `cosmic-cluster`, namespace `focus`, arm64 (Graviton) node pool           |
+| IaC       | Pulumi (`infra/`), Helm (`k8s/focus/`)                                        |
+| CI/CD     | GitHub Actions; push to `main` → trunk/go/ts checks → ECR → `helm upgrade`    |
 
 ## Repository layout
 

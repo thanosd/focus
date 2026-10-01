@@ -26,7 +26,11 @@ export function FlagIcon({
   );
 }
 
-export function ClockIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+export function ClockIcon({
+  className = "w-3.5 h-3.5",
+}: {
+  className?: string;
+}) {
   return (
     <svg className={className} {...base} aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
@@ -48,7 +52,11 @@ export function CalendarIcon({
   );
 }
 
-export function RepeatIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+export function RepeatIcon({
+  className = "w-3.5 h-3.5",
+}: {
+  className?: string;
+}) {
   return (
     <svg className={className} {...base} aria-hidden="true">
       <path d="M17 2l4 4-4 4" />
@@ -75,7 +83,11 @@ export function PlusIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-export function CheckIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+export function CheckIcon({
+  className = "w-3.5 h-3.5",
+}: {
+  className?: string;
+}) {
   return (
     <svg className={className} {...base} strokeWidth={3} aria-hidden="true">
       <path d="M5 13l4 4L19 7" />
@@ -83,7 +95,11 @@ export function CheckIcon({ className = "w-3.5 h-3.5" }: { className?: string })
   );
 }
 
-export function FolderIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+export function FolderIcon({
+  className = "w-3.5 h-3.5",
+}: {
+  className?: string;
+}) {
   return (
     <svg className={className} {...base} aria-hidden="true">
       <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />

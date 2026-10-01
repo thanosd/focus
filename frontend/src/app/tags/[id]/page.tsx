@@ -28,7 +28,9 @@ export default function TagTasksPage() {
         query={{ tag_id: tagId }}
         quickAdd={{ tagIds: [tagId] }}
         emptyMessage="No active tasks with this tag."
-        keep={(t) => t.status === "active" && t.tags.some((x) => x.id === tagId)}
+        keep={(t) =>
+          t.status === "active" && t.tags.some((x) => x.id === tagId)
+        }
         headerExtra={
           <Link href="/tags" className="text-sm text-blue-600 hover:underline">
             All tags

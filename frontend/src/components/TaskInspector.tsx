@@ -1,7 +1,13 @@
 "use client";
 
 import { apiClient, errorMessage } from "@/lib/api-client";
-import type { Project, RepeatRule, Tag, Task, UpdateTaskRequest } from "@/lib/types";
+import type {
+  Project,
+  RepeatRule,
+  Tag,
+  Task,
+  UpdateTaskRequest,
+} from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCounts } from "@/contexts/CountsContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -94,9 +100,12 @@ export default function TaskInspector({
       return;
     }
     if (kind === "complete") {
-      const { data, error } = await apiClient.POST("/api/tasks/{taskId}/complete", {
-        params: { path: { taskId: task.id } },
-      });
+      const { data, error } = await apiClient.POST(
+        "/api/tasks/{taskId}/complete",
+        {
+          params: { path: { taskId: task.id } },
+        },
+      );
       setBusy(false);
       if (error || !data) {
         toast(errorMessage(error, "Couldn't complete task"), "error");
@@ -108,7 +117,10 @@ export default function TaskInspector({
       refreshCounts();
       return;
     }
-    const path = kind === "drop" ? "/api/tasks/{taskId}/drop" : "/api/tasks/{taskId}/reopen";
+    const path =
+      kind === "drop"
+        ? "/api/tasks/{taskId}/drop"
+        : "/api/tasks/{taskId}/reopen";
     const { data, error } = await apiClient.POST(path, {
       params: { path: { taskId: task.id } },
     });
@@ -314,7 +326,8 @@ export default function TaskInspector({
         )}
         <button
           onClick={() => {
-            if (window.confirm("Delete this task permanently?")) action("delete");
+            if (window.confirm("Delete this task permanently?"))
+              action("delete");
           }}
           disabled={busy}
           className="ml-auto text-sm font-medium px-3 py-1.5 rounded-md text-red-600 hover:bg-red-50 disabled:opacity-50"

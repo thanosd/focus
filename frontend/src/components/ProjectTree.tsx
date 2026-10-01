@@ -115,7 +115,9 @@ export default function ProjectTree({
         {top.map((p) => row(p, 0))}
         {orphans.map((p) => row(p, 0))}
         {top.length === 0 && orphans.length === 0 && (
-          <div className="text-sm text-gray-500 px-2 py-4">No projects yet.</div>
+          <div className="text-sm text-gray-500 px-2 py-4">
+            No projects yet.
+          </div>
         )}
       </div>
       <label className="mt-3 flex items-center gap-2 text-xs text-gray-500 px-2">

@@ -65,7 +65,9 @@ new aws.iam.RolePolicy("focus-eks-policy", {
   policy: cosmicCluster.arn.apply(
     (clusterArn: string) =>
       aws.iam.getPolicyDocumentOutput({
-        statements: [{ actions: ["eks:DescribeCluster"], resources: [clusterArn] }],
+        statements: [
+          { actions: ["eks:DescribeCluster"], resources: [clusterArn] },
+        ],
       }).json,
   ),
 });
@@ -79,7 +81,11 @@ const lifecyclePolicy = JSON.stringify({
     {
       rulePriority: 1,
       description: "Keep last 10 images",
-      selection: { tagStatus: "any", countType: "imageCountMoreThan", countNumber: 10 },
+      selection: {
+        tagStatus: "any",
+        countType: "imageCountMoreThan",
+        countNumber: 10,
+      },
       action: { type: "expire" },
     },
   ],
@@ -99,8 +105,14 @@ const frontendRepo = new aws.ecr.Repository("focus-frontend", {
   tags: { Project: "focus" },
 });
 
-new aws.ecr.LifecyclePolicy("focus-backend-lifecycle", { repository: backendRepo.name, policy: lifecyclePolicy });
-new aws.ecr.LifecyclePolicy("focus-frontend-lifecycle", { repository: frontendRepo.name, policy: lifecyclePolicy });
+new aws.ecr.LifecyclePolicy("focus-backend-lifecycle", {
+  repository: backendRepo.name,
+  policy: lifecyclePolicy,
+});
+new aws.ecr.LifecyclePolicy("focus-frontend-lifecycle", {
+  repository: frontendRepo.name,
+  policy: lifecyclePolicy,
+});
 
 new aws.iam.RolePolicy("focus-ecr-policy", {
   role: deployRole.name,
@@ -142,7 +154,8 @@ new aws.eks.AccessEntry("focus-access-entry", {
 new aws.eks.AccessPolicyAssociation("focus-access-policy", {
   clusterName: cosmicClusterName,
   principalArn: deployRole.arn,
-  policyArn: "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy",
+  policyArn:
+    "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy",
   accessScope: { type: "cluster" },
 });
 
@@ -156,7 +169,11 @@ new aws.eks.AccessPolicyAssociation("focus-access-policy", {
 const appSecret = new aws.secretsmanager.Secret("focus-secret", {
   name: "cosmic/focus/production",
   description: "Application secrets for Focus (production)",
-  tags: { Name: "focus-production", Project: "focus", Environment: "production" },
+  tags: {
+    Name: "focus-production",
+    Project: "focus",
+    Environment: "production",
+  },
 });
 
 new aws.iam.RolePolicy("focus-secrets-policy", {
@@ -177,7 +194,11 @@ new aws.iam.RolePolicy("focus-secrets-policy", {
 // ============================================================================
 
 const kubeconfig = pulumi
-  .all([cosmicCluster.name, cosmicCluster.endpoint, cosmicCluster.certificateAuthorities])
+  .all([
+    cosmicCluster.name,
+    cosmicCluster.endpoint,
+    cosmicCluster.certificateAuthorities,
+  ])
   .apply(([name, endpoint, cas]) => {
     const caData = cas[0]?.data ?? "";
     return `apiVersion: v1
@@ -225,8 +246,18 @@ new k8s.rbac.v1.ClusterRoleBinding(
   "focus-deploy-cluster-admin",
   {
     metadata: { name: "focus-deploy-cluster-admin" },
-    subjects: [{ kind: "User", name: "focus-deploy", apiGroup: "rbac.authorization.k8s.io" }],
-    roleRef: { kind: "ClusterRole", name: "cluster-admin", apiGroup: "rbac.authorization.k8s.io" },
+    subjects: [
+      {
+        kind: "User",
+        name: "focus-deploy",
+        apiGroup: "rbac.authorization.k8s.io",
+      },
+    ],
+    roleRef: {
+      kind: "ClusterRole",
+      name: "cluster-admin",
+      apiGroup: "rbac.authorization.k8s.io",
+    },
   },
   { provider: k8sProvider },
 );

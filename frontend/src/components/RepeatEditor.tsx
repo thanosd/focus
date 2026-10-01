@@ -22,7 +22,11 @@ export default function RepeatEditor({
   disabled,
 }: RepeatEditorProps) {
   const enabled = !!value;
-  const rule: RepeatRule = value ?? { every: 1, unit: "week", from: "completion" };
+  const rule: RepeatRule = value ?? {
+    every: 1,
+    unit: "week",
+    from: "completion",
+  };
 
   return (
     <div className="space-y-2">
@@ -45,7 +49,10 @@ export default function RepeatEditor({
             value={rule.every}
             disabled={disabled}
             onChange={(e) =>
-              onChange({ ...rule, every: Math.max(1, Number(e.target.value) || 1) })
+              onChange({
+                ...rule,
+                every: Math.max(1, Number(e.target.value) || 1),
+              })
             }
             className="w-16 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />

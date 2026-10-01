@@ -19,7 +19,9 @@ export default function DueEditor({ task, onUpdated }: DueEditorProps) {
   const { toast } = useToast();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [explicit, setExplicit] = useState(toDatetimeLocal(task.due_at, timezone));
+  const [explicit, setExplicit] = useState(
+    toDatetimeLocal(task.due_at, timezone),
+  );
   const [interpretation, setInterpretation] = useState<string | null>(null);
 
   useEffect(() => {

@@ -132,7 +132,8 @@ function ReviewContent() {
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm(`Drop "${current.name}"?`)) setStatus("dropped");
+                  if (window.confirm(`Drop "${current.name}"?`))
+                    setStatus("dropped");
                 }}
                 className="text-sm font-medium px-3 py-1.5 rounded-md border border-gray-300 bg-white text-red-600 hover:bg-red-50"
               >
@@ -145,7 +146,9 @@ function ReviewContent() {
         <div className="space-y-4">
           <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
             <div className="text-3xl mb-2">✓</div>
-            <div className="text-lg font-semibold text-gray-900">All caught up</div>
+            <div className="text-lg font-semibold text-gray-900">
+              All caught up
+            </div>
             <p className="text-sm text-gray-500 mt-1">
               {total > 0
                 ? `You reviewed ${total} project${total === 1 ? "" : "s"}.`
@@ -163,7 +166,9 @@ function ReviewContent() {
                   href={`/projects/${p.id}`}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                 >
-                  <span className="flex-1 truncate text-gray-800">{p.name}</span>
+                  <span className="flex-1 truncate text-gray-800">
+                    {p.name}
+                  </span>
                   <span className="text-xs text-gray-500">
                     {p.next_review_at
                       ? dayLabel(p.next_review_at, timezone)

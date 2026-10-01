@@ -74,7 +74,9 @@ export default function TaskWorkspace({
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+          {subtitle && (
+            <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+          )}
         </div>
         {headerExtra}
       </div>

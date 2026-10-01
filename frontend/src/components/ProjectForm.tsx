@@ -26,7 +26,9 @@ export default function ProjectForm({
   const [interval, setInterval] = useState(7);
   const [busy, setBusy] = useState(false);
   const topLevel = projects
-    .filter((p) => !p.parent_id && p.status !== "dropped" && p.status !== "completed")
+    .filter(
+      (p) => !p.parent_id && p.status !== "dropped" && p.status !== "completed",
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const submit = async (e: React.FormEvent) => {
@@ -90,7 +92,9 @@ export default function ProjectForm({
           type="number"
           min={1}
           value={interval}
-          onChange={(e) => setInterval(Math.max(1, Number(e.target.value) || 1))}
+          onChange={(e) =>
+            setInterval(Math.max(1, Number(e.target.value) || 1))
+          }
           className="w-16 border border-gray-300 rounded-md px-2 py-1 text-sm"
         />
         days

@@ -65,7 +65,10 @@ apiClient.use({
 });
 
 /** Extract a human-readable message from an openapi-fetch error value. */
-export function errorMessage(error: unknown, fallback = "Request failed"): string {
+export function errorMessage(
+  error: unknown,
+  fallback = "Request failed",
+): string {
   if (!error) return fallback;
   if (typeof error === "string") return error;
   if (typeof error === "object" && "message" in error) {

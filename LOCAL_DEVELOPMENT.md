@@ -86,18 +86,18 @@ Requires `oapi-codegen`:
 
 ## Environment variables
 
-| Variable               | Purpose                                              |
-| ---------------------- | ---------------------------------------------------- |
-| `DATABASE_URL`         | Postgres connection string                           |
-| `BACKEND_CORS_ORIGINS` | Allowed browser origins (comma-separated)            |
-| `FRONTEND_URL`         | Where the API redirects after sign-in                |
-| `API_URL`              | Public API URL (builds the Google redirect URL)      |
-| `GOOGLE_CLIENT_ID`     | Google OAuth client ID                               |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret                           |
-| `AUTH_ALLOWED_EMAILS`  | Sign-in allowlist (comma-separated, case-insensitive)|
-| `CSRF_AUTH_KEY`        | 32+ byte random secret for the CSRF middleware       |
-| `CLAUDE_API_KEY`       | Optional; enables the AI date-parsing fallback       |
-| `CLAUDE_MODEL`         | Optional; defaults to `claude-opus-5`                |
-| `TEMPORAL_HOST`        | Temporal frontend host:port (worker only)            |
-| `TEMPORAL_NAMESPACE`   | Temporal namespace (worker only)                     |
-| `SESSION_EXPIRE_HOURS` | Session lifetime (default 720 = 30 days)             |
+| Variable               | Purpose                                               |
+| ---------------------- | ----------------------------------------------------- |
+| `DATABASE_URL`         | Postgres connection string                            |
+| `BACKEND_CORS_ORIGINS` | Allowed browser origins (comma-separated)             |
+| `FRONTEND_URL`         | Where the API redirects after sign-in                 |
+| `API_URL`              | Public API URL (builds the Google redirect URL)       |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID                                |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret                            |
+| `AUTH_ALLOWED_EMAILS`  | Sign-in allowlist (comma-separated, case-insensitive) |
+| `CSRF_AUTH_KEY`        | 32+ byte random secret for the CSRF middleware        |
+| `CLAUDE_API_KEY`       | Optional; enables the AI date-parsing fallback        |
+| `CLAUDE_MODEL`         | Optional; defaults to `claude-opus-5`                 |
+| `TEMPORAL_HOST`        | Temporal frontend host:port (worker only)             |
+| `TEMPORAL_NAMESPACE`   | Temporal namespace (worker only)                      |
+| `SESSION_EXPIRE_HOURS` | Session lifetime (default 720 = 30 days)              |

@@ -28,9 +28,12 @@ export default function TagPicker({
   const create = async () => {
     const name = draft.trim();
     if (!name) return;
-    const existing = tags.find((t) => t.name.toLowerCase() === name.toLowerCase());
+    const existing = tags.find(
+      (t) => t.name.toLowerCase() === name.toLowerCase(),
+    );
     if (existing) {
-      if (!selectedIds.includes(existing.id)) onChange([...selectedIds, existing.id]);
+      if (!selectedIds.includes(existing.id))
+        onChange([...selectedIds, existing.id]);
       setDraft("");
       return;
     }

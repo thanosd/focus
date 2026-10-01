@@ -4,16 +4,16 @@ Schema of record: `backend/migrations/`. This is the orientation.
 
 ## Tables
 
-| Table          | Purpose                                                               |
-| -------------- | --------------------------------------------------------------------- |
-| `users`        | Google accounts (`email` unique, `google_sub`, `timezone`)            |
-| `sessions`     | Browser sessions (30 days)                                            |
-| `oauth_states` | Sign-in nonces (10 minutes)                                           |
-| `api_tokens`   | MCP bearer tokens — only `token_hash` (SHA-256) is stored             |
-| `projects`     | `parent_id` for nesting, `status`, `sequential`, review fields        |
+| Table          | Purpose                                                                            |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `users`        | Google accounts (`email` unique, `google_sub`, `timezone`)                         |
+| `sessions`     | Browser sessions (30 days)                                                         |
+| `oauth_states` | Sign-in nonces (10 minutes)                                                        |
+| `api_tokens`   | MCP bearer tokens — only `token_hash` (SHA-256) is stored                          |
+| `projects`     | `parent_id` for nesting, `status`, `sequential`, review fields                     |
 | `tasks`        | `project_id` NULL = inbox; `flagged`, `defer_until`, `due_at`, `repeat_rule` JSONB |
-| `tags`         | Unique per `(user_id, name)`                                          |
-| `task_tags`    | Many-to-many                                                          |
+| `tags`         | Unique per `(user_id, name)`                                                       |
+| `task_tags`    | Many-to-many                                                                       |
 
 All timestamps are `TIMESTAMPTZ`. Deleting a project cascades to its
 child projects and all of their tasks. Deleting a user cascades everything.
@@ -39,14 +39,14 @@ list views, badges and project counts can't disagree.
 
 ## Views (`GET /api/tasks?view=`)
 
-| view        | filter                                         | order                |
-| ----------- | ---------------------------------------------- | -------------------- |
-| `inbox`     | active, no project                             | sort order           |
-| `available` | the rule above (default)                       | sort order           |
-| `flagged`   | active, flagged                                | due date, then sort  |
-| `due`       | active, has due date                           | due date             |
-| `completed` | completed or dropped (last 200)                | most recent first    |
-| `all`       | every active task                              | sort order           |
+| view        | filter                          | order               |
+| ----------- | ------------------------------- | ------------------- |
+| `inbox`     | active, no project              | sort order          |
+| `available` | the rule above (default)        | sort order          |
+| `flagged`   | active, flagged                 | due date, then sort |
+| `due`       | active, has due date            | due date            |
+| `completed` | completed or dropped (last 200) | most recent first   |
+| `all`       | every active task               | sort order          |
 
 `project_id`, `tag_id` and `q` (title/note search) combine with any view.
 
