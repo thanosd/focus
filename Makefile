@@ -12,8 +12,9 @@ all: format trunk build test types lint-frontend
 format:
 	trunk fmt
 
+# Same linters CI runs (osv-scanner included; it reads go.mod's toolchain line)
 trunk:
-	trunk check --all --exclude osv-scanner
+	trunk check --all
 
 # Build Go backend (host)
 build:
