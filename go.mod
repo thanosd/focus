@@ -2,6 +2,8 @@ module github.com/thanosd/focus
 
 go 1.26.0
 
+toolchain go1.26.8
+
 require (
 	filippo.io/csrf v0.2.1
 	github.com/anthropics/anthropic-sdk-go v1.77.0
