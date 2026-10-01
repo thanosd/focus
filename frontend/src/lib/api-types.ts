@@ -251,6 +251,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reorder tasks
+         * @description Sets sort_order for the given tasks to their position in the list. Used for drag-and-drop in a project or the inbox; the order matters for sequential projects.
+         */
+        post: operations["reorderTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dates/parse": {
         parameters: {
             query?: never;
@@ -599,6 +619,10 @@ export interface components {
              * @example America/New_York
              */
             timezone?: string;
+        };
+        /** @description Full ordering of the project's (or inbox's) active tasks. Tasks not listed keep their relative order after the listed ones. */
+        ReorderTasksRequest: {
+            task_ids: string[];
         };
         CompleteTaskResponse: {
             task: components["schemas"]["Task"];
@@ -1392,6 +1416,48 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    reorderTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderTasksRequest"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"][];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

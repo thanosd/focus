@@ -54,6 +54,7 @@ func NewRouter(d Deps) http.Handler {
 	// Tasks
 	mux.Handle("GET /api/tasks", private(d.Tasks.HandleList))
 	mux.Handle("POST /api/tasks", private(d.Tasks.HandleCreate))
+	mux.Handle("POST /api/tasks/reorder", private(d.Tasks.HandleReorder))
 	mux.Handle("GET /api/tasks/{taskId}", private(d.Tasks.HandleGet))
 	mux.Handle("PATCH /api/tasks/{taskId}", private(d.Tasks.HandleUpdate))
 	mux.Handle("DELETE /api/tasks/{taskId}", private(d.Tasks.HandleDelete))

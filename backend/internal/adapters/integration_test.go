@@ -161,6 +161,21 @@ func TestRepositoriesAndServices(t *testing.T) {
 		t.Fatalf("search: %+v", got)
 	}
 
+	// Reorder: in a sequential project the first task in order is the available one
+	reordered, err := taskSvc.Reorder(ctx, user.ID, []string{second.ID, first.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reordered[0].IsAvailable || reordered[1].IsAvailable || reordered[0].ID != second.ID {
+		t.Fatalf("after reorder the moved task should be available: %+v", reordered)
+	}
+	if _, err := taskSvc.Reorder(ctx, user.ID, []string{first.ID, "00000000-0000-0000-0000-000000000000"}); err == nil {
+		t.Fatal("unknown id in reorder should be rejected")
+	}
+	if _, err = taskSvc.Reorder(ctx, user.ID, []string{first.ID, second.ID}); err != nil {
+		t.Fatal(err)
+	}
+
 	// Project counts
 	k, _ := projSvc.Get(ctx, user.ID, kitchen.ID)
 	if k.RemainingTaskCount != 2 || k.AvailableTaskCount != 1 {

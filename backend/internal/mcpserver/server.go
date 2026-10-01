@@ -212,6 +212,10 @@ type updateTaskIn struct {
 	Tags      []string `json:"tags,omitempty" jsonschema:"Replace the tag set with these names (empty list clears)"`
 }
 
+type reorderTasksIn struct {
+	TaskIDs []string `json:"task_ids" jsonschema:"Task IDs in the desired order (first = top). For sequential projects this decides which task is available."`
+}
+
 type deferTaskIn struct {
 	TaskID string `json:"task_id" jsonschema:"The task's ID"`
 	Until  string `json:"until" jsonschema:"When to defer until: \"1d\", \"1w\", \"1m\", \"tomorrow\", \"next monday\", \"in 3 days\", \"mid october\", or an RFC 3339 timestamp"`
@@ -266,6 +270,7 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.server, &mcp.Tool{Name: "drop_task", Description: "Drop (abandon) a task without completing it."}, s.dropTask)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "reopen_task", Description: "Make a completed or dropped task active again."}, s.reopenTask)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "delete_task", Description: "Permanently delete a task."}, s.deleteTask)
+	mcp.AddTool(s.server, &mcp.Tool{Name: "reorder_tasks", Description: "Set the order of tasks within a project or the inbox (first ID is first). In sequential projects the first active task is the available one."}, s.reorderTasks)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "defer_task", Description: "Defer a task until a date/time given in natural language (\"1w\", \"next monday\", \"in 3 days\", \"mid october\")."}, s.deferTask)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "list_projects", Description: "List projects with their parent_id (two-level tree), status, review dates and task counts."}, s.listProjects)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "get_project", Description: "Get a project with its active tasks and sub-projects."}, s.getProject)
@@ -570,6 +575,23 @@ func (s *Server) deleteTask(ctx context.Context, req *mcp.CallToolRequest, in ta
 		return toolErr(err)
 	}
 	return textResult("deleted")
+}
+
+func (s *Server) reorderTasks(ctx context.Context, req *mcp.CallToolRequest, in reorderTasksIn) (*mcp.CallToolResult, any, error) {
+	user, err := s.user(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	tasks, err := s.deps.Tasks.Reorder(ctx, user.ID, in.TaskIDs)
+	if err != nil {
+		return toolErr(err)
+	}
+	loc := user.Location()
+	out := make([]taskOut, 0, len(tasks))
+	for i := range tasks {
+		out = append(out, toTaskOut(&tasks[i], loc))
+	}
+	return jsonResult(out)
 }
 
 func (s *Server) deferTask(ctx context.Context, req *mcp.CallToolRequest, in deferTaskIn) (*mcp.CallToolResult, any, error) {

@@ -1,3 +1,4 @@
 frontend/src/lib/api-types.ts
 api/openapi-bundled.yaml
+api/openapi-bundled-go.yaml
 k8s/focus/templates/*.yaml

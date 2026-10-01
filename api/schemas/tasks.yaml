@@ -424,3 +424,15 @@ Counts:
       type: integer
     review_due:
       type: integer
+
+ReorderTasksRequest:
+  type: object
+  description: Full ordering of the project's (or inbox's) active tasks. Tasks not listed keep their relative order after the listed ones.
+  required:
+    - task_ids
+  properties:
+    task_ids:
+      type: array
+      items:
+        type: string
+        format: uuid

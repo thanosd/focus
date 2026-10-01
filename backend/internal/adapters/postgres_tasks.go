@@ -247,6 +247,22 @@ func (r *TaskRepo) SetTags(ctx context.Context, userID, taskID string, tagIDs []
 	return tx.Commit()
 }
 
+// Reorder writes sort_order = index for the listed tasks in one statement.
+func (r *TaskRepo) Reorder(ctx context.Context, userID string, taskIDs []string) error {
+	if len(taskIDs) == 0 {
+		return nil
+	}
+	positions := make([]int, len(taskIDs))
+	for i := range taskIDs {
+		positions[i] = i
+	}
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE tasks t SET sort_order = o.pos
+		FROM UNNEST($2::uuid[], $3::int[]) AS o(id, pos)
+		WHERE t.id = o.id AND t.user_id = $1`, userID, pq.Array(taskIDs), pq.Array(positions))
+	return err
+}
+
 // Delete removes a task.
 func (r *TaskRepo) Delete(ctx context.Context, userID, id string) error {
 	res, err := r.db.ExecContext(ctx, `DELETE FROM tasks WHERE id = $1 AND user_id = $2`, id, userID)

@@ -55,6 +55,8 @@ paths:
     $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1reopen
   /api/tasks/{taskId}/defer:
     $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1defer
+  /api/tasks/reorder:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks~1reorder
   /api/dates/parse:
     $ref: ./paths/tasks.yaml#/~1api~1dates~1parse
   /api/counts:
@@ -120,6 +122,8 @@ components:
       $ref: ./schemas/tasks.yaml#/UpdateTaskRequest
     DeferTaskRequest:
       $ref: ./schemas/tasks.yaml#/DeferTaskRequest
+    ReorderTasksRequest:
+      $ref: ./schemas/tasks.yaml#/ReorderTasksRequest
     CompleteTaskResponse:
       $ref: ./schemas/tasks.yaml#/CompleteTaskResponse
     ParseDateRequest:

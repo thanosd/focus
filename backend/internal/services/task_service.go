@@ -288,6 +288,40 @@ func (s *TaskService) spawnNext(ctx context.Context, done *domain.Task, complete
 	return s.Get(ctx, done.UserID, next.ID)
 }
 
+// Reorder applies a drag-and-drop ordering. Every ID must be a task of
+// the user; unknown IDs are rejected rather than silently ignored so the
+// UI learns its list is stale.
+func (s *TaskService) Reorder(ctx context.Context, userID string, taskIDs []string) ([]domain.Task, error) {
+	if len(taskIDs) == 0 {
+		return nil, fmt.Errorf("%w: task_ids is required", domain.ErrValidation)
+	}
+	seen := make(map[string]bool, len(taskIDs))
+	for _, id := range taskIDs {
+		if seen[id] {
+			return nil, fmt.Errorf("%w: duplicate task id %s", domain.ErrValidation, id)
+		}
+		seen[id] = true
+		if _, err := s.Get(ctx, userID, id); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				return nil, fmt.Errorf("%w: task %s not found", domain.ErrValidation, id)
+			}
+			return nil, err
+		}
+	}
+	if err := s.tasks.Reorder(ctx, userID, taskIDs); err != nil {
+		return nil, err
+	}
+	out := make([]domain.Task, 0, len(taskIDs))
+	for _, id := range taskIDs {
+		t, err := s.Get(ctx, userID, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *t)
+	}
+	return out, nil
+}
+
 // Drop abandons a task without completing it.
 func (s *TaskService) Drop(ctx context.Context, userID, id string) (*domain.Task, error) {
 	t, err := s.Get(ctx, userID, id)

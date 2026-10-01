@@ -66,3 +66,4 @@ build/
 *.out
 /backend/focus
 /backend/tmp/
+api/openapi-bundled-go.yaml

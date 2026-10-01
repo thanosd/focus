@@ -422,3 +422,40 @@
               $ref: ../schemas/common.yaml#/Error
     security:
       - cookieAuth: []
+
+/api/tasks/reorder:
+  post:
+    tags:
+      - tasks
+    summary: Reorder tasks
+    description: Sets sort_order for the given tasks to their position in the list. Used for drag-and-drop in a project or the inbox; the order matters for sequential projects.
+    operationId: reorderTasks
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/ReorderTasksRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../schemas/tasks.yaml#/Task
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []

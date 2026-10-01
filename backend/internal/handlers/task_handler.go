@@ -257,6 +257,29 @@ func (h *TaskHandler) simpleAction(w http.ResponseWriter, r *http.Request, fn fu
 	writeJSON(w, http.StatusOK, toAPITask(t))
 }
 
+// HandleReorder applies a drag-and-drop ordering.
+func (h *TaskHandler) HandleReorder(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(w, r)
+	if user == nil {
+		return
+	}
+	var req api.ReorderTasksRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	ids := make([]string, 0, len(req.TaskIds))
+	for _, id := range req.TaskIds {
+		ids = append(ids, id.String())
+	}
+	tasks, err := h.tasks.Reorder(r.Context(), user.ID, ids)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toAPITasks(tasks))
+}
+
 // HandleDefer sets the defer date from a phrase, timestamp, or clears it.
 func (h *TaskHandler) HandleDefer(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(w, r)

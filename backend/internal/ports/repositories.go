@@ -71,6 +71,8 @@ type TaskRepository interface {
 	List(ctx context.Context, userID string, f domain.TaskFilter) ([]domain.Task, error)
 	Update(ctx context.Context, t *domain.Task) error
 	SetTags(ctx context.Context, userID, taskID string, tagIDs []string) error
+	// Reorder sets sort_order = position for each listed task owned by the user.
+	Reorder(ctx context.Context, userID string, taskIDs []string) error
 	Delete(ctx context.Context, userID, id string) error
 	Counts(ctx context.Context, userID string, now time.Time) (*domain.Counts, error)
 }
