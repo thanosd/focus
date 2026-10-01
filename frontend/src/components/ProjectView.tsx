@@ -14,7 +14,7 @@ import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, SlidersHorizontal } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import TaskList from "@/components/TaskList";
 import TaskInspector from "@/components/TaskInspector";
 import ProjectInspector from "@/components/ProjectInspector";
@@ -61,7 +61,6 @@ export default function ProjectView({
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Task | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -206,7 +205,6 @@ export default function ProjectView({
   const closeTask = useCallback(() => setSelected(null), []);
   const closePane = useCallback(() => {
     setSelected(null);
-    setDetailsOpen(false);
     onClose?.();
   }, [onClose]);
 
@@ -263,16 +261,6 @@ export default function ProjectView({
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 pt-1">
                 <StatusBadge status={project.status} />
-                <Button
-                  size="xs"
-                  className="md:hidden"
-                  onClick={() => {
-                    setSelected(null);
-                    setDetailsOpen(true);
-                  }}
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" /> Details
-                </Button>
               </div>
             </div>
           </div>
@@ -339,7 +327,7 @@ export default function ProjectView({
       </div>
 
       <DockedPane
-        open={!!selected || detailsOpen}
+        open={!!selected}
         desktopAlwaysOpen
         onClose={closePane}
         label={selected ? "Task details" : "Project details"}

@@ -305,39 +305,39 @@ export default function TaskInspector({
             <div>Dropped {dateTimeLabel(task.dropped_at, timezone)}</div>
           )}
         </div>
-      </div>
 
-      <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-200 bg-gray-50">
-        {isActive ? (
-          <>
+        <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+          {isActive ? (
+            <>
+              <Button
+                variant="primary"
+                onClick={() => action("complete")}
+                disabled={busy}
+              >
+                Complete
+              </Button>
+              <Button onClick={() => action("drop")} disabled={busy}>
+                Drop
+              </Button>
+            </>
+          ) : (
             <Button
               variant="primary"
-              onClick={() => action("complete")}
+              onClick={() => action("reopen")}
               disabled={busy}
             >
-              Complete
+              Reopen
             </Button>
-            <Button onClick={() => action("drop")} disabled={busy}>
-              Drop
-            </Button>
-          </>
-        ) : (
+          )}
           <Button
-            variant="primary"
-            onClick={() => action("reopen")}
+            variant="danger-ghost"
+            onClick={() => action("delete")}
             disabled={busy}
+            className="ml-auto"
           >
-            Reopen
+            Delete
           </Button>
-        )}
-        <Button
-          variant="danger-ghost"
-          onClick={() => action("delete")}
-          disabled={busy}
-          className="ml-auto"
-        >
-          Delete
-        </Button>
+        </div>
       </div>
     </div>
   );

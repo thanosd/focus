@@ -233,78 +233,78 @@ export default function ProjectInspector({
             <div>Closed {dayLabel(project.completed_at, timezone)}</div>
           )}
         </div>
-      </div>
 
-      <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={onReview} disabled={busy}>
-            Mark reviewed
-          </Button>
-          {actions}
-        </div>
-        {/* Review mode supplies its own status actions above. */}
-        <div
-          className={cn(
-            "flex flex-wrap items-center gap-2",
-            actions && "hidden",
-          )}
-        >
-          {closed ? (
-            <Button
-              size="xs"
-              onClick={() => setStatus("active")}
-              disabled={busy}
-            >
-              <PlayCircle className="w-3.5 h-3.5" /> Reactivate
+        <div className="pt-4 border-t border-gray-200 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="primary" onClick={onReview} disabled={busy}>
+              Mark reviewed
             </Button>
-          ) : (
-            <>
+            {actions}
+          </div>
+          {/* Review mode supplies its own status actions above. */}
+          <div
+            className={cn(
+              "flex flex-wrap items-center gap-2",
+              actions && "hidden",
+            )}
+          >
+            {closed ? (
               <Button
                 size="xs"
-                onClick={() => setStatus("completed")}
+                onClick={() => setStatus("active")}
                 disabled={busy}
-                title="Mark the whole project done"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" /> Complete project
+                <PlayCircle className="w-3.5 h-3.5" /> Reactivate
               </Button>
-              {project.status === "on_hold" ? (
+            ) : (
+              <>
                 <Button
                   size="xs"
-                  onClick={() => setStatus("active")}
+                  onClick={() => setStatus("completed")}
                   disabled={busy}
+                  title="Mark the whole project done"
                 >
-                  <PlayCircle className="w-3.5 h-3.5" /> Reactivate
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Complete project
                 </Button>
-              ) : (
+                {project.status === "on_hold" ? (
+                  <Button
+                    size="xs"
+                    onClick={() => setStatus("active")}
+                    disabled={busy}
+                  >
+                    <PlayCircle className="w-3.5 h-3.5" /> Reactivate
+                  </Button>
+                ) : (
+                  <Button
+                    size="xs"
+                    onClick={() => setStatus("on_hold")}
+                    disabled={busy}
+                  >
+                    <PauseCircle className="w-3.5 h-3.5" /> Put on hold
+                  </Button>
+                )}
                 <Button
                   size="xs"
-                  onClick={() => setStatus("on_hold")}
+                  variant="danger-ghost"
+                  onClick={() => setStatus("dropped")}
                   disabled={busy}
                 >
-                  <PauseCircle className="w-3.5 h-3.5" /> Put on hold
+                  <XCircle className="w-3.5 h-3.5" /> Drop project
                 </Button>
-              )}
+              </>
+            )}
+            {onDelete && (
               <Button
                 size="xs"
                 variant="danger-ghost"
-                onClick={() => setStatus("dropped")}
+                onClick={onDelete}
                 disabled={busy}
+                className="ml-auto"
               >
-                <XCircle className="w-3.5 h-3.5" /> Drop project
+                Delete
               </Button>
-            </>
-          )}
-          {onDelete && (
-            <Button
-              size="xs"
-              variant="danger-ghost"
-              onClick={onDelete}
-              disabled={busy}
-              className="ml-auto"
-            >
-              Delete
-            </Button>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
