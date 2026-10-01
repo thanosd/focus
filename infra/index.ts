@@ -144,20 +144,27 @@ new aws.iam.RolePolicy("focus-ecr-policy", {
 // Access Entry + aws-auth-style ClusterRoleBinding, same belt-and-suspenders
 // approach as team-metrics (the cluster's auth mode ignored Access Entries).
 
-new aws.eks.AccessEntry("focus-access-entry", {
+const accessEntry = new aws.eks.AccessEntry("focus-access-entry", {
   clusterName: cosmicClusterName,
   principalArn: deployRole.arn,
   type: "STANDARD",
   userName: "focus-deploy",
 });
 
-new aws.eks.AccessPolicyAssociation("focus-access-policy", {
-  clusterName: cosmicClusterName,
-  principalArn: deployRole.arn,
-  policyArn:
-    "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy",
-  accessScope: { type: "cluster" },
-});
+// The association must wait for the entry: EKS returns 404 for the
+// principal until the access entry exists, and nothing in the inputs
+// ties the two together.
+new aws.eks.AccessPolicyAssociation(
+  "focus-access-policy",
+  {
+    clusterName: cosmicClusterName,
+    principalArn: deployRole.arn,
+    policyArn:
+      "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy",
+    accessScope: { type: "cluster" },
+  },
+  { dependsOn: [accessEntry] },
+);
 
 // ============================================================================
 // SECRETS MANAGER
