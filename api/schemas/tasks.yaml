@@ -436,3 +436,15 @@ ReorderTasksRequest:
       items:
         type: string
         format: uuid
+
+ReorderProjectsRequest:
+  type: object
+  description: Ordering of sibling projects (same parent). sort_order is set to each ID's position.
+  required:
+    - project_ids
+  properties:
+    project_ids:
+      type: array
+      items:
+        type: string
+        format: uuid

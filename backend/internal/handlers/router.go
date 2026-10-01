@@ -68,6 +68,7 @@ func NewRouter(d Deps) http.Handler {
 	// Projects + reviews
 	mux.Handle("GET /api/projects", private(d.Projects.HandleList))
 	mux.Handle("POST /api/projects", private(d.Projects.HandleCreate))
+	mux.Handle("POST /api/projects/reorder", private(d.Projects.HandleReorder))
 	mux.Handle("GET /api/projects/{projectId}", private(d.Projects.HandleGet))
 	mux.Handle("PATCH /api/projects/{projectId}", private(d.Projects.HandleUpdate))
 	mux.Handle("DELETE /api/projects/{projectId}", private(d.Projects.HandleDelete))

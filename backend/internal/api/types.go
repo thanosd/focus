@@ -360,6 +360,11 @@ type ProjectDetail struct {
 // ProjectStatus defines model for ProjectStatus.
 type ProjectStatus string
 
+// ReorderProjectsRequest Ordering of sibling projects (same parent). sort_order is set to each ID's position.
+type ReorderProjectsRequest struct {
+	ProjectIds []openapi_types.UUID `json:"project_ids"`
+}
+
 // ReorderTasksRequest Full ordering of the project's (or inbox's) active tasks. Tasks not listed keep their relative order after the listed ones.
 type ReorderTasksRequest struct {
 	TaskIds []openapi_types.UUID `json:"task_ids"`
@@ -537,6 +542,9 @@ type ParseDateJSONRequestBody = ParseDateRequest
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = CreateProjectRequest
+
+// ReorderProjectsJSONRequestBody defines body for ReorderProjects for application/json ContentType.
+type ReorderProjectsJSONRequestBody = ReorderProjectsRequest
 
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = UpdateProjectRequest

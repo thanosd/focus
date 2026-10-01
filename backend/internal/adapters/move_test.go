@@ -38,6 +38,18 @@ func TestMoveProjectWithChildrenUnderBucket(t *testing.T) {
 	if rec.Depth != 2 {
 		t.Fatalf("child depth after move: %d", rec.Depth)
 	}
+	// Sibling reorder: swap two top-level projects.
+	ordered, err := projSvc.Reorder(ctx, user.ID, []string{personal.ID, house.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ordered[0].ID != personal.ID || ordered[0].SortOrder != 0 || ordered[1].SortOrder != 1 {
+		t.Fatalf("reorder: %+v", ordered)
+	}
+	list, _ := projSvc.List(ctx, user.ID, "")
+	if list[0].ID != personal.ID {
+		t.Fatalf("list should honour sort_order: %s first", list[0].Name)
+	}
 	// And back to the top.
 	if _, err := projSvc.Update(ctx, user.ID, house.ID, services.ProjectPatch{SetParent: true, ParentID: nil}); err != nil {
 		t.Fatal(err)

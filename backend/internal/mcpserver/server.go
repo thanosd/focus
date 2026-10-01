@@ -247,6 +247,10 @@ type updateProjectIn struct {
 	ReviewIntervalDays *int    `json:"review_interval_days,omitempty"`
 }
 
+type reorderProjectsIn struct {
+	ProjectIDs []string `json:"project_ids" jsonschema:"Sibling project IDs in the desired order (first = top)"`
+}
+
 type createTagIn struct {
 	Name  string `json:"name" jsonschema:"Tag name"`
 	Color string `json:"color,omitempty" jsonschema:"#rrggbb"`
@@ -276,6 +280,7 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.server, &mcp.Tool{Name: "get_project", Description: "Get a project with its active tasks and sub-projects."}, s.getProject)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "create_project", Description: "Create a project, optionally nested under a parent (three levels max)."}, s.createProject)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "update_project", Description: "Rename a project, change its note, status (active/on_hold/completed/dropped), sequential flag or review interval."}, s.updateProject)
+	mcp.AddTool(s.server, &mcp.Tool{Name: "reorder_projects", Description: "Set the display order of sibling projects (first ID is first)."}, s.reorderProjects)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "list_reviews", Description: "List projects that are due for review (oldest first) and the upcoming review schedule."}, s.listReviews)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "mark_project_reviewed", Description: "Mark a project as reviewed now and schedule its next review."}, s.markReviewed)
 	mcp.AddTool(s.server, &mcp.Tool{Name: "list_tags", Description: "List tags with active task counts."}, s.listTags)
@@ -689,6 +694,23 @@ func (s *Server) updateProject(ctx context.Context, req *mcp.CallToolRequest, in
 		return toolErr(err)
 	}
 	return jsonResult(toProjectOut(p, user.Location()))
+}
+
+func (s *Server) reorderProjects(ctx context.Context, req *mcp.CallToolRequest, in reorderProjectsIn) (*mcp.CallToolResult, any, error) {
+	user, err := s.user(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	projects, err := s.deps.Projects.Reorder(ctx, user.ID, in.ProjectIDs)
+	if err != nil {
+		return toolErr(err)
+	}
+	loc := user.Location()
+	out := make([]projectOut, 0, len(projects))
+	for i := range projects {
+		out = append(out, toProjectOut(&projects[i], loc))
+	}
+	return jsonResult(out)
 }
 
 func (s *Server) listReviews(ctx context.Context, req *mcp.CallToolRequest, _ emptyIn) (*mcp.CallToolResult, any, error) {

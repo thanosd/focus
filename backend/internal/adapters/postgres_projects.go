@@ -141,6 +141,22 @@ func (r *ProjectRepo) Update(ctx context.Context, p *domain.Project) error {
 	return nil
 }
 
+// Reorder writes sort_order = index for the listed projects in one statement.
+func (r *ProjectRepo) Reorder(ctx context.Context, userID string, projectIDs []string) error {
+	if len(projectIDs) == 0 {
+		return nil
+	}
+	positions := make([]int, len(projectIDs))
+	for i := range projectIDs {
+		positions[i] = i
+	}
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE projects p SET sort_order = o.pos
+		FROM UNNEST($2::uuid[], $3::int[]) AS o(id, pos)
+		WHERE p.id = o.id AND p.user_id = $1`, userID, pq.Array(projectIDs), pq.Array(positions))
+	return err
+}
+
 // Delete removes a project; children and tasks cascade.
 func (r *ProjectRepo) Delete(ctx context.Context, userID, id string) error {
 	res, err := r.db.ExecContext(ctx, `DELETE FROM projects WHERE id = $1 AND user_id = $2`, id, userID)

@@ -65,6 +65,8 @@ paths:
   # Projects
   /api/projects:
     $ref: ./paths/projects.yaml#/~1api~1projects
+  /api/projects/reorder:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1reorder
   /api/projects/{projectId}:
     $ref: ./paths/projects.yaml#/~1api~1projects~1{projectId}
   /api/projects/{projectId}/review:
@@ -124,6 +126,8 @@ components:
       $ref: ./schemas/tasks.yaml#/DeferTaskRequest
     ReorderTasksRequest:
       $ref: ./schemas/tasks.yaml#/ReorderTasksRequest
+    ReorderProjectsRequest:
+      $ref: ./schemas/tasks.yaml#/ReorderProjectsRequest
     CompleteTaskResponse:
       $ref: ./schemas/tasks.yaml#/CompleteTaskResponse
     ParseDateRequest:

@@ -240,3 +240,40 @@
               $ref: ../schemas/common.yaml#/Error
     security:
       - cookieAuth: []
+
+/api/projects/reorder:
+  post:
+    tags:
+      - projects
+    summary: Reorder projects
+    description: Sets sort_order for the given projects to their position in the list. Intended for drag-and-drop among siblings in the project tree.
+    operationId: reorderProjects
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/ReorderProjectsRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../schemas/tasks.yaml#/Project
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []

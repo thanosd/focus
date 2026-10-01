@@ -54,6 +54,8 @@ type ProjectRepository interface {
 	List(ctx context.Context, userID string, statuses []domain.ProjectStatus) ([]domain.Project, error)
 	ListChildren(ctx context.Context, userID, parentID string) ([]domain.Project, error)
 	Update(ctx context.Context, p *domain.Project) error
+	// Reorder sets sort_order = position for each listed project owned by the user.
+	Reorder(ctx context.Context, userID string, projectIDs []string) error
 	Delete(ctx context.Context, userID, id string) error
 	// ListReviewDue returns active/on-hold projects whose next review is
 	// at or before now, oldest first.

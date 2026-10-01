@@ -141,6 +141,29 @@ func (h *ProjectHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toAPIProject(p))
 }
 
+// HandleReorder applies a drag-and-drop ordering.
+func (h *ProjectHandler) HandleReorder(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(w, r)
+	if user == nil {
+		return
+	}
+	var req api.ReorderProjectsRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	ids := make([]string, 0, len(req.ProjectIds))
+	for _, id := range req.ProjectIds {
+		ids = append(ids, id.String())
+	}
+	projects, err := h.projects.Reorder(r.Context(), user.ID, ids)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toAPIProjects(projects))
+}
+
 // HandleDelete deletes a project.
 func (h *ProjectHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(w, r)

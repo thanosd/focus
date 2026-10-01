@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -244,6 +245,39 @@ func (s *ProjectService) Update(ctx context.Context, userID, id string, p Projec
 		return nil, err
 	}
 	return s.Get(ctx, userID, id)
+}
+
+// Reorder applies a drag-and-drop ordering among projects. Every ID must
+// belong to the user; unknown IDs are rejected so a stale tree is noticed.
+func (s *ProjectService) Reorder(ctx context.Context, userID string, ids []string) ([]domain.Project, error) {
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("%w: project_ids is required", domain.ErrValidation)
+	}
+	seen := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		if seen[id] {
+			return nil, fmt.Errorf("%w: duplicate project id %s", domain.ErrValidation, id)
+		}
+		seen[id] = true
+		if _, err := s.Get(ctx, userID, id); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				return nil, fmt.Errorf("%w: project %s not found", domain.ErrValidation, id)
+			}
+			return nil, err
+		}
+	}
+	if err := s.projects.Reorder(ctx, userID, ids); err != nil {
+		return nil, err
+	}
+	out := make([]domain.Project, 0, len(ids))
+	for _, id := range ids {
+		p, err := s.Get(ctx, userID, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *p)
+	}
+	return out, nil
 }
 
 // MarkReviewed stamps the review and schedules the next one.

@@ -329,6 +329,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reorder projects
+         * @description Sets sort_order for the given projects to their position in the list. Intended for drag-and-drop among siblings in the project tree.
+         */
+        post: operations["reorderProjects"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{projectId}": {
         parameters: {
             query?: never;
@@ -623,6 +643,10 @@ export interface components {
         /** @description Full ordering of the project's (or inbox's) active tasks. Tasks not listed keep their relative order after the listed ones. */
         ReorderTasksRequest: {
             task_ids: string[];
+        };
+        /** @description Ordering of sibling projects (same parent). sort_order is set to each ID's position. */
+        ReorderProjectsRequest: {
+            project_ids: string[];
         };
         CompleteTaskResponse: {
             task: components["schemas"]["Task"];
@@ -1590,6 +1614,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Project"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    reorderProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderProjectsRequest"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"][];
                 };
             };
             /** @description Bad request */
