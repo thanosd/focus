@@ -8,6 +8,7 @@ import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dateTimeLabel, dayLabel, isPast } from "@/lib/dates";
 import { unavailableReason } from "@/lib/availability";
+import { comesBackLabel, repeatSummary } from "@/lib/repeats";
 import { useState } from "react";
 import {
   Calendar,
@@ -30,6 +31,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,16 +112,7 @@ export default function TaskRow({
         return;
       }
       if (data.next_task) {
-        toast(
-          `Next occurrence created${
-            data.next_task.defer_until
-              ? ` for ${dayLabel(data.next_task.defer_until, timezone)}`
-              : data.next_task.due_at
-                ? ` due ${dayLabel(data.next_task.due_at, timezone)}`
-                : ""
-          }`,
-          "success",
-        );
+        toast(comesBackLabel(data.next_task, timezone), "success");
       }
       onCompleted?.(data.task, data.next_task);
     } else {
@@ -229,28 +226,54 @@ export default function TaskRow({
           {index}
         </span>
       )}
-      <button
-        type="button"
-        onClick={(e) => {
-          stop(e);
-          complete();
-        }}
-        disabled={busy}
-        aria-label={done ? "Reopen task" : "Complete task"}
-        className={cn(
-          "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-          done
-            ? "bg-blue-600 border-blue-600 text-white"
-            : dropped
-              ? "border-gray-300 bg-gray-100 text-transparent"
-              : muted
-                ? "border-gray-200 bg-gray-50 hover:border-blue-400 text-transparent hover:text-blue-200"
-                : "border-gray-300 hover:border-blue-500 text-transparent hover:text-blue-300",
-        )}
-      >
-        <Check className="w-3 h-3" strokeWidth={3} />
-      </button>
+      {(() => {
+        const checkbox = (
+          <button
+            type="button"
+            onClick={(e) => {
+              stop(e);
+              complete();
+            }}
+            disabled={busy}
+            aria-label={done ? "Reopen task" : "Complete task"}
+            className={cn(
+              "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+              done
+                ? "bg-blue-600 border-blue-600 text-white"
+                : dropped
+                  ? "border-gray-300 bg-gray-100 text-transparent"
+                  : muted
+                    ? "border-gray-200 bg-gray-50 hover:border-blue-400 text-transparent hover:text-blue-200"
+                    : "border-gray-300 hover:border-blue-500 text-transparent hover:text-blue-300",
+            )}
+          >
+            <Check className="w-3 h-3" strokeWidth={3} />
+          </button>
+        );
+        const summary = repeatSummary(task, timezone);
+        if (!summary) return checkbox;
+        // Repeating task: say it comes back BEFORE the user clicks.
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex items-start gap-1 flex-shrink-0">
+                {checkbox}
+                <Repeat
+                  className={cn(
+                    "mt-1 w-3.5 h-3.5 flex-shrink-0",
+                    muted ? "text-gray-300" : "text-blue-500",
+                  )}
+                  aria-hidden="true"
+                />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="start">
+              {summary}
+            </TooltipContent>
+          </Tooltip>
+        );
+      })()}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -280,9 +303,6 @@ export default function TaskRow({
             <span className="text-[10px] uppercase tracking-wide text-gray-400 border border-gray-200 rounded px-1">
               dropped
             </span>
-          )}
-          {task.repeat_rule && (
-            <Repeat className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
           )}
         </div>
         {(task.tags.length > 0 ||

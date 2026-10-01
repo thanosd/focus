@@ -154,7 +154,7 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
 
   return (
     <div className="flex flex-1 items-start">
-      <div className="w-72 flex-shrink-0 p-6 md:p-8 md:pr-0 space-y-3">
+      <div className="w-72 md:w-[24rem] xl:w-[28rem] flex-shrink-0 p-6 md:p-8 md:pr-0 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
           <Button
@@ -199,6 +199,7 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
             key={`${selectedId}:${version}`}
             projectId={selectedId}
             projects={activeProjects}
+            treeProjects={allProjects.length > 0 ? allProjects : activeProjects}
             tags={tags}
             onCreateTag={addTag}
             onProjectChanged={onProjectChanged}

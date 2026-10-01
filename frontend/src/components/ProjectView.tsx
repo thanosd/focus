@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/button";
 interface ProjectViewProps {
   projectId: string;
   projects: Project[];
+  /** Every project, all statuses, for the hierarchy shown in the pane. */
+  treeProjects?: Project[];
   tags: Tag[];
   onCreateTag: (name: string) => Promise<Tag | null>;
   /** Called after any project-level change so parents can refresh lists. */
@@ -47,6 +49,7 @@ interface ProjectViewProps {
 export default function ProjectView({
   projectId,
   projects,
+  treeProjects,
   tags,
   onCreateTag,
   onProjectChanged,
@@ -237,7 +240,7 @@ export default function ProjectView({
   return (
     <div className="flex flex-1 items-start">
       <div className="flex-1 min-w-0 p-6 md:p-8">
-        <div className="max-w-4xl space-y-4">
+        <div className="space-y-4">
           <div>
             {parent && (
               <Link
@@ -350,6 +353,7 @@ export default function ProjectView({
           <ProjectInspector
             project={project}
             projects={projects}
+            allProjects={treeProjects}
             childCount={children.length}
             busy={busy}
             onPatch={patchProject}

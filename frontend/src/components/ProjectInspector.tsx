@@ -5,8 +5,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { dayLabel } from "@/lib/dates";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   CheckCircle2,
+  CornerDownRight,
   PauseCircle,
   PlayCircle,
   X,
@@ -34,6 +36,8 @@ interface ProjectInspectorProps {
   project: Project;
   /** All candidate parents (top-level, active). */
   projects: Project[];
+  /** Every project (all statuses) — used to draw the full sub-project hierarchy. */
+  allProjects?: Project[];
   childCount: number;
   busy?: boolean;
   onPatch: (body: UpdateProjectRequest) => void;
@@ -48,6 +52,7 @@ interface ProjectInspectorProps {
 export default function ProjectInspector({
   project,
   projects,
+  allProjects,
   childCount,
   busy = false,
   onPatch,
@@ -69,6 +74,8 @@ export default function ProjectInspector({
   // Depth 0/1 projects outside this project's own subtree (three levels max).
   const parents = parentOptions(projects, project.id);
   const isContainer = childCount > 0;
+  const tree = allProjects && allProjects.length > 0 ? allProjects : projects;
+  const descendants = subtree(tree, project.id);
   const closed = project.status === "completed" || project.status === "dropped";
 
   const setStatus = async (status: ProjectStatus) => {
@@ -235,6 +242,35 @@ export default function ProjectInspector({
           </Select>
         </Field>
 
+        {descendants.length > 0 && (
+          <Field
+            label="Sub-projects"
+            hint={`${descendants.length} nested project${descendants.length === 1 ? "" : "s"}`}
+          >
+            <ul className="rounded-md border border-gray-200 bg-white divide-y divide-gray-100">
+              {descendants.map(({ project: sub, depth }) => (
+                <li key={sub.id}>
+                  <Link
+                    href={`/projects/${sub.id}`}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-700"
+                    style={{ paddingLeft: `${8 + (depth - 1) * 16}px` }}
+                  >
+                    <CornerDownRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                    <span className="truncate flex-1">{sub.name}</span>
+                    <StatusBadge status={sub.status} />
+                    <span
+                      className="text-[11px] text-gray-400 tabular-nums flex-shrink-0"
+                      title={`${sub.available_task_count} available / ${sub.remaining_task_count} remaining`}
+                    >
+                      {sub.available_task_count}/{sub.remaining_task_count}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Field>
+        )}
+
         <div className="text-xs text-gray-400 space-y-0.5 pt-2 border-t border-gray-100">
           <div>
             {project.available_task_count} available ·{" "}
@@ -321,4 +357,32 @@ export default function ProjectInspector({
       </div>
     </div>
   );
+}
+
+/** Depth-first list of a project's descendants (depth 1 = direct child). */
+function subtree(
+  projects: Project[],
+  rootId: string,
+): { project: Project; depth: number }[] {
+  const byParent = new Map<string, Project[]>();
+  for (const p of projects) {
+    if (!p.parent_id) continue;
+    const list = byParent.get(p.parent_id) ?? [];
+    list.push(p);
+    byParent.set(p.parent_id, list);
+  }
+  for (const list of byParent.values()) {
+    list.sort(
+      (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
+    );
+  }
+  const out: { project: Project; depth: number }[] = [];
+  const walk = (id: string, depth: number) => {
+    for (const child of byParent.get(id) ?? []) {
+      out.push({ project: child, depth });
+      if (depth < 3) walk(child.id, depth + 1);
+    }
+  };
+  walk(rootId, 1);
+  return out;
 }

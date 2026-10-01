@@ -1,13 +1,7 @@
 "use client";
 
 import { apiClient, errorMessage } from "@/lib/api-client";
-import type {
-  Project,
-  RepeatRule,
-  Tag,
-  Task,
-  UpdateTaskRequest,
-} from "@/lib/types";
+import type { Project, Tag, Task, UpdateTaskRequest } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCounts } from "@/contexts/CountsContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
@@ -19,7 +13,8 @@ import DeferMenu from "@/components/DeferMenu";
 import DueEditor from "@/components/DueEditor";
 import ProjectPicker from "@/components/ProjectPicker";
 import TagPicker from "@/components/TagPicker";
-import RepeatEditor, { describeRepeat } from "@/components/RepeatEditor";
+import RepeatField from "@/components/RepeatField";
+import { comesBackLabel } from "@/lib/repeats";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -124,7 +119,8 @@ export default function TaskInspector({
         toast(errorMessage(error, "Couldn't complete task"), "error");
         return;
       }
-      if (data.next_task) toast("Next occurrence created", "success");
+      if (data.next_task)
+        toast(comesBackLabel(data.next_task, timezone), "success");
       if (onCompleted) onCompleted(data.task, data.next_task);
       else onUpdated(data.task);
       refreshCounts();
@@ -285,14 +281,15 @@ export default function TaskInspector({
           <DueEditor task={task} onUpdated={onUpdated} />
         </Field>
 
-        <Field
-          label="Repeat"
-          hint={task.repeat_rule ? describeRepeat(task.repeat_rule) : undefined}
-        >
-          <RepeatEditor
-            value={task.repeat_rule}
+        <Field label="Repeat">
+          <RepeatField
+            task={task}
+            timezone={timezone}
             disabled={busy}
-            onChange={(rule: RepeatRule | null) => patch({ repeat_rule: rule })}
+            onUpdated={(t) => {
+              onUpdated(t);
+              refreshCounts();
+            }}
           />
         </Field>
 

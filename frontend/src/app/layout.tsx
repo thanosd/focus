@@ -8,6 +8,7 @@ import { ConfirmProvider } from "@/contexts/ConfirmContext";
 import Sidebar from "@/components/Sidebar";
 import AppHeader from "@/components/AppHeader";
 import Footer from "@/components/Footer";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const focusSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -48,16 +49,18 @@ export default function RootLayout({
           <CountsProvider>
             <ToastProvider>
               <ConfirmProvider>
-                <div className="min-h-screen flex flex-col bg-gray-50">
-                  <AppHeader />
-                  <div className="flex flex-1">
-                    <Sidebar />
-                    <main className="flex-1 min-w-0 flex flex-col">
-                      {children}
-                    </main>
+                <TooltipProvider delayDuration={200}>
+                  <div className="min-h-screen flex flex-col bg-gray-50">
+                    <AppHeader />
+                    <div className="flex flex-1">
+                      <Sidebar />
+                      <main className="flex-1 min-w-0 flex flex-col">
+                        {children}
+                      </main>
+                    </div>
+                    <Footer />
                   </div>
-                  <Footer />
-                </div>
+                </TooltipProvider>
               </ConfirmProvider>
             </ToastProvider>
           </CountsProvider>

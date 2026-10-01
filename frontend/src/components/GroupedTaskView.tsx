@@ -109,7 +109,7 @@ export default function GroupedTaskView({
   return (
     <div className="flex flex-1 items-start">
       <div className="flex-1 min-w-0 p-6 md:p-8">
-        <div className="max-w-4xl">
+        <div className="max-w-6xl">
           <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
