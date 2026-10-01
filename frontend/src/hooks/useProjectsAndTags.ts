@@ -36,7 +36,7 @@ export function useProjectsAndTags() {
   return { projects, tags, loaded, reload, addTag };
 }
 
-/** Flattened project list with indentation info for <select> rendering. */
+/** Flattened project list (depth-first, any depth) with indentation info for <select> rendering. */
 export function projectOptions(projects: Project[]) {
   const top = projects.filter((p) => !p.parent_id);
   const byParent = new Map<string, Project[]>();
@@ -50,11 +50,36 @@ export function projectOptions(projects: Project[]) {
   const sortFn = (a: Project, b: Project) =>
     a.sort_order - b.sort_order || a.name.localeCompare(b.name);
   const out: { project: Project; depth: number }[] = [];
-  for (const t of [...top].sort(sortFn)) {
-    out.push({ project: t, depth: 0 });
-    for (const c of (byParent.get(t.id) ?? []).sort(sortFn)) {
-      out.push({ project: c, depth: 1 });
+  const walk = (list: Project[], depth: number) => {
+    for (const p of [...list].sort(sortFn)) {
+      out.push({ project: p, depth });
+      walk(byParent.get(p.id) ?? [], depth + 1);
+    }
+  };
+  walk(top, 0);
+  return out;
+}
+
+/** IDs of a project and everything nested under it. */
+export function subtreeIds(projects: Project[], rootId: string): Set<string> {
+  const ids = new Set<string>([rootId]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const p of projects) {
+      if (p.parent_id && ids.has(p.parent_id) && !ids.has(p.id)) {
+        ids.add(p.id);
+        grew = true;
+      }
     }
   }
-  return out;
+  return ids;
+}
+
+/** Projects that may become a parent: depth 0 or 1, open, outside `excludeId`'s subtree. */
+export function parentOptions(projects: Project[], excludeId?: string) {
+  const excluded = excludeId ? subtreeIds(projects, excludeId) : new Set();
+  return projectOptions(
+    projects.filter((p) => p.status === "active" || p.status === "on_hold"),
+  ).filter(({ project, depth }) => depth <= 1 && !excluded.has(project.id));
 }

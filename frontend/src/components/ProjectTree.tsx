@@ -52,7 +52,7 @@ export function StatusBadge({ status }: { status: Project["status"] }) {
   );
 }
 
-/** Two-level tree of projects with task counts. */
+/** Three-level tree of projects (bucket > project > sub-project) with task counts. */
 export default function ProjectTree({
   projects,
   selectedId,
@@ -77,7 +77,7 @@ export default function ProjectTree({
 
   const row = (p: Project, depth: number) => {
     const active = p.id === selectedId;
-    const kids = depth === 0 ? childrenOf(p.id) : [];
+    const kids = childrenOf(p.id);
     const isCollapsed = collapsed.has(p.id);
     const closed = p.status === "completed" || p.status === "dropped";
     return (
@@ -92,7 +92,7 @@ export default function ProjectTree({
           )}
           style={{ paddingLeft: `${8 + depth * 16}px` }}
         >
-          {depth === 0 ? (
+          {kids.length > 0 ? (
             <button
               type="button"
               onClick={(e) => {
@@ -105,10 +105,7 @@ export default function ProjectTree({
                   return n;
                 });
               }}
-              className={cn(
-                "w-4 h-4 flex items-center justify-center text-gray-400 rounded hover:text-gray-600",
-                kids.length === 0 && "invisible",
-              )}
+              className="w-4 h-4 flex items-center justify-center text-gray-400 rounded hover:text-gray-600"
               aria-label={isCollapsed ? "Expand" : "Collapse"}
             >
               <ChevronRight
@@ -187,7 +184,7 @@ export default function ProjectTree({
             </DropdownMenu>
           </div>
         )}
-        {!isCollapsed && kids.map((k) => row(k, 1))}
+        {!isCollapsed && kids.map((k) => row(k, depth + 1))}
       </div>
     );
   };

@@ -3,6 +3,7 @@
 import { apiClient, errorMessage } from "@/lib/api-client";
 import type { Project } from "@/lib/types";
 import { useToast } from "@/contexts/ToastContext";
+import { parentOptions } from "@/hooks/useProjectsAndTags";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,11 +38,8 @@ export default function ProjectForm({
   const [sequential, setSequential] = useState(false);
   const [interval, setInterval] = useState(7);
   const [busy, setBusy] = useState(false);
-  const topLevel = projects
-    .filter(
-      (p) => !p.parent_id && p.status !== "dropped" && p.status !== "completed",
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // Buckets (depth 0) and projects (depth 1) can hold children; three levels max.
+  const parents = parentOptions(projects);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,9 +78,9 @@ export default function ProjectForm({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={TOP}>Top-level project</SelectItem>
-          {topLevel.map((p) => (
-            <SelectItem key={p.id} value={p.id} depth={1}>
+          <SelectItem value={TOP}>Top-level (bucket or project)</SelectItem>
+          {parents.map(({ project: p, depth }) => (
+            <SelectItem key={p.id} value={p.id} depth={depth + 1}>
               Inside {p.name}
             </SelectItem>
           ))}

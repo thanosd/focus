@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Field } from "@/components/TaskInspector";
+import { parentOptions } from "@/hooks/useProjectsAndTags";
 import { StatusBadge } from "@/components/ProjectTree";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,10 +66,9 @@ export default function ProjectInspector({
     setNote(project.note);
   }, [project.id, project.name, project.note]);
 
-  const parents = projects.filter(
-    (p) => !p.parent_id && p.id !== project.id && p.status === "active",
-  );
-  const canNest = childCount === 0;
+  // Depth 0/1 projects outside this project's own subtree (three levels max).
+  const parents = parentOptions(projects, project.id);
+  const isContainer = childCount > 0;
   const closed = project.status === "completed" || project.status === "dropped";
 
   const setStatus = async (status: ProjectStatus) => {
@@ -158,19 +158,27 @@ export default function ProjectInspector({
           </Select>
         </Field>
 
-        <Field
-          label="Sequential"
-          hint="Only the first remaining task is available"
-        >
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <Switch
-              checked={project.sequential}
-              disabled={busy}
-              onCheckedChange={(c) => onPatch({ sequential: c })}
-            />
-            {project.sequential ? "On" : "Off"}
-          </label>
-        </Field>
+        {isContainer ? (
+          <Field label="Sequential">
+            <p className="text-xs text-gray-400">
+              Container — sequencing applies to leaf projects.
+            </p>
+          </Field>
+        ) : (
+          <Field
+            label="Sequential"
+            hint="Only the first remaining task is available"
+          >
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <Switch
+                checked={project.sequential}
+                disabled={busy}
+                onCheckedChange={(c) => onPatch({ sequential: c })}
+              />
+              {project.sequential ? "On" : "Off"}
+            </label>
+          </Field>
+        )}
 
         <Field label="Review">
           <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -202,11 +210,15 @@ export default function ProjectInspector({
 
         <Field
           label="Parent"
-          hint={!canNest ? "Has sub-projects; must stay top-level" : undefined}
+          hint={
+            isContainer
+              ? "Three levels max; a move that pushes sub-projects too deep is rejected"
+              : undefined
+          }
         >
           <Select
             value={project.parent_id ?? TOP}
-            disabled={busy || (!canNest && !project.parent_id)}
+            disabled={busy}
             onValueChange={(v) => onPatch({ parent_id: v === TOP ? null : v })}
           >
             <SelectTrigger aria-label="Parent project">
@@ -214,8 +226,8 @@ export default function ProjectInspector({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={TOP}>Top-level</SelectItem>
-              {parents.map((p) => (
-                <SelectItem key={p.id} value={p.id} depth={1}>
+              {parents.map(({ project: p, depth }) => (
+                <SelectItem key={p.id} value={p.id} depth={depth + 1}>
                   {p.name}
                 </SelectItem>
               ))}

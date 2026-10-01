@@ -12,7 +12,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { dayLabel } from "@/lib/dates";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ListChecks, SkipForward } from "lucide-react";
+import { Check, ListChecks, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Mode = "due" | "all";
@@ -92,6 +92,52 @@ function ReviewContent() {
     },
     [advance],
   );
+
+  // "All good": stamp the current project reviewed and move straight on.
+  const [stamping, setStamping] = useState(false);
+  const allGood = useCallback(async () => {
+    if (!current || stamping) return;
+    setStamping(true);
+    const { error } = await apiClient.POST("/api/projects/{projectId}/review", {
+      params: { path: { projectId: current.id } },
+    });
+    setStamping(false);
+    if (error) {
+      toast(errorMessage(error, "Couldn't mark reviewed"), "error");
+      return;
+    }
+    toast(`Reviewed ${current.name}`, "success");
+    advance();
+  }, [current, stamping, toast, advance]);
+
+  const skip = useCallback(() => setIndex((i) => i + 1), []);
+
+  // Keyboard: Enter or g = All good, s = skip (outside text fields / menus).
+  useEffect(() => {
+    if (!current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        el?.isContentEditable ||
+        el?.closest?.("[role=dialog],[role=menu],[role=listbox]")
+      )
+        return;
+      if (e.key === "Enter" || e.key === "g") {
+        e.preventDefault();
+        allGood();
+      } else if (e.key === "s") {
+        e.preventDefault();
+        skip();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [current, allGood, skip]);
 
   const setStatus = async (status: ProjectStatus) => {
     if (!current) return;
@@ -212,10 +258,14 @@ function ReviewContent() {
             {Math.min(index + 1, total)} of {total}
           </span>
           <Button
-            size="xs"
-            variant="ghost"
-            onClick={() => setIndex((i) => i + 1)}
+            variant="primary"
+            onClick={allGood}
+            disabled={stamping}
+            title="Mark reviewed and show the next project (Enter or g)"
           >
+            <Check className="w-4 h-4" /> All good
+          </Button>
+          <Button size="xs" variant="ghost" onClick={skip} title="Skip (s)">
             <SkipForward className="w-3.5 h-3.5" /> Skip
           </Button>
           {mode === "all" && (
