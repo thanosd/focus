@@ -33,6 +33,9 @@ env:
   FRONTEND_URL: https://focus.cosmicteacups.com
   API_URL: https://focus-api.cosmicteacups.com
   CORS_ORIGINS: https://focus.cosmicteacups.com
+  # Temporal worker (nightly maintenance). Requires the focus-temporal
+  # namespace to be healthy; see docs/deploy/setup-checklist.md step 8.
+  WORKER_ENABLED: "false"
 
 permissions:
   contents: read
@@ -303,6 +306,11 @@ jobs:
               repository: focus-frontend
               tag: ${{ needs.build-frontend.outputs.image-tag }}
           worker:
+            # Temporal is installed separately (k8s/install-temporal.sh). Keep the
+            # worker off until it is healthy, otherwise its crash loop fails the
+            # whole --atomic rollout. Flip to true once `kubectl get pods -n
+            # focus-temporal` is all Running.
+            enabled: ${{ env.WORKER_ENABLED }}
             image:
               repository: focus-backend
               tag: ${{ needs.build-backend.outputs.image-tag }}
@@ -323,4 +331,6 @@ jobs:
         run: |
           kubectl rollout status deployment/focus-backend -n ${{ env.NAMESPACE }} --timeout=5m
           kubectl rollout status deployment/focus-frontend -n ${{ env.NAMESPACE }} --timeout=5m
-          kubectl rollout status deployment/focus-worker -n ${{ env.NAMESPACE }} --timeout=5m
+          if [ "${{ env.WORKER_ENABLED }}" = "true" ]; then
+            kubectl rollout status deployment/focus-worker -n ${{ env.NAMESPACE }} --timeout=5m
+          fi

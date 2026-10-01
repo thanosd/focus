@@ -116,6 +116,11 @@ Installs the `temporalio/temporal` chart (pinned 1.4.0) into
 `focus-temporal` against the two `focus_temporal*` databases. The worker
 auto-registers the `focus` Temporal namespace and the nightly schedule.
 
+The worker Deployment is off by default (`WORKER_ENABLED: "false"` in
+`.github/workflows/deploy-production.yml`) so a missing Temporal can't fail
+the app rollout. Once every pod in `focus-temporal` is Running, set it to
+`"true"` and push.
+
 ## 9. First deploy
 
 - [ ] Push to `main` (or run **Deploy to Production** manually). The
