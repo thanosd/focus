@@ -35,7 +35,8 @@ pulumi up
 ```
 
 Config keys (all optional): `appHostname`, `apiHostname`, `githubOrg`,
-`githubRepo`, `cosmicClusterName`, `namespace`.
+`githubRepo`, `githubOwnerId`, `githubRepoId` (for GitHub's immutable OIDC
+subject, `repo:OWNER@ID/REPO@ID:*`), `cosmicClusterName`, `namespace`.
 
 After `pulumi up`, set the GitHub Actions role ARN (output
 `deployRoleArn`) matches `AWS_ROLE_ARN` in

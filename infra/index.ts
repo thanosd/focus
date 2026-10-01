@@ -15,6 +15,12 @@ const appHostname = config.get("appHostname") || "focus.cosmicteacups.com";
 const apiHostname = config.get("apiHostname") || "focus-api.cosmicteacups.com";
 const githubOrg = config.get("githubOrg") || "thanosd";
 const githubRepo = config.get("githubRepo") || "focus";
+// GitHub's "immutable subject" OIDC setting (on by default for new repos)
+// rewrites the sub claim to repo:OWNER@OWNER_ID/REPO@REPO_ID:..., so the
+// trust policy must accept that form too. IDs from
+// `gh api repos/thanosd/focus/actions/oidc/customization/sub`.
+const githubOwnerId = config.get("githubOwnerId") || "587168";
+const githubRepoId = config.get("githubRepoId") || "1398967082";
 const cosmicClusterName = config.get("cosmicClusterName") || "cosmic-cluster";
 const namespaceName = config.get("namespace") || "focus";
 
@@ -50,7 +56,10 @@ const deployRole = new aws.iam.Role("focus-deploy-role", {
               {
                 test: "StringLike",
                 variable: "token.actions.githubusercontent.com:sub",
-                values: [`repo:${githubOrg}/${githubRepo}:*`],
+                values: [
+                  `repo:${githubOrg}/${githubRepo}:*`,
+                  `repo:${githubOrg}@${githubOwnerId}/${githubRepo}@${githubRepoId}:*`,
+                ],
               },
             ],
           },
