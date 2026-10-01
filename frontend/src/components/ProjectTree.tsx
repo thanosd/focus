@@ -6,12 +6,30 @@ import { useState } from "react";
 import {
   CheckCircle2,
   ChevronRight,
+  GripVertical,
   MoreHorizontal,
   PauseCircle,
   PlayCircle,
   Trash2,
   XCircle,
 } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxisIfAvailable } from "@/lib/dnd";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -31,6 +49,81 @@ interface ProjectTreeProps {
   /** Row menu actions; the menu is hidden when these are absent. */
   onSetStatus?: (project: Project, status: ProjectStatus) => void;
   onDelete?: (project: Project) => void;
+  /**
+   * Drag-and-drop among siblings. `moved` was dropped on `over` (same
+   * parent); `after` says whether it lands below `over`. The drag handle
+   * is hidden when this is absent.
+   */
+  onReorder?: (moved: Project, over: Project, after: boolean) => void;
+}
+
+/** One tree row (plus its subtree), sortable within its sibling group. */
+function TreeRow({
+  project: p,
+  depth,
+  children: subtree,
+  canDrag,
+  render,
+}: {
+  project: Project;
+  depth: number;
+  children: React.ReactNode;
+  canDrag: boolean;
+  render: (
+    p: Project,
+    depth: number,
+    handle: React.ReactNode,
+    dragging: boolean,
+  ) => React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: p.id, disabled: !canDrag });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    position: "relative" as const,
+    zIndex: isDragging ? 10 : undefined,
+  };
+  const handle = canDrag ? (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      aria-label={`Drag to reorder ${p.name}`}
+      title="Drag to reorder"
+      className={cn(
+        "-ml-1 p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+        "opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100",
+        isDragging && "opacity-100 text-gray-500",
+      )}
+    >
+      <GripVertical className="w-3.5 h-3.5" />
+    </button>
+  ) : null;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group/row relative rounded-md",
+        isDragging && "shadow-lg ring-1 ring-blue-200 bg-white",
+      )}
+    >
+      {render(p, depth, handle, isDragging)}
+      {subtree}
+    </div>
+  );
 }
 
 export function StatusBadge({ status }: { status: Project["status"] }) {
@@ -60,6 +153,7 @@ export default function ProjectTree({
   onToggleInactive,
   onSetStatus,
   onDelete,
+  onReorder,
 }: ProjectTreeProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const visible = showInactive
@@ -75,15 +169,44 @@ export default function ProjectTree({
     .filter((p) => p.parent_id && !visible.some((x) => x.id === p.parent_id))
     .sort(sortFn);
 
-  const row = (p: Project, depth: number) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!onReorder || !over || active.id === over.id) return;
+    const moved = visible.find((p) => p.id === active.id);
+    const target = visible.find((p) => p.id === over.id);
+    if (!moved || !target) return;
+    if ((moved.parent_id ?? null) !== (target.parent_id ?? null)) return;
+    const siblings = moved.parent_id ? childrenOf(moved.parent_id) : top;
+    const from = siblings.findIndex((p) => p.id === moved.id);
+    const to = siblings.findIndex((p) => p.id === target.id);
+    if (from < 0 || to < 0) return;
+    onReorder(moved, target, from < to);
+  };
+
+  const renderRow = (
+    p: Project,
+    depth: number,
+    handle: React.ReactNode,
+    dragging: boolean,
+  ) => {
     const active = p.id === selectedId;
     const kids = childrenOf(p.id);
     const isCollapsed = collapsed.has(p.id);
     const closed = p.status === "completed" || p.status === "dropped";
     return (
-      <div key={p.id} className="group/row relative">
+      <>
         <Link
           href={`/projects/${p.id}`}
+          onClick={(e) => {
+            if (dragging) e.preventDefault();
+          }}
           className={cn(
             "flex items-center gap-2 py-1.5 pr-8 rounded-md text-sm transition-colors",
             active
@@ -92,6 +215,7 @@ export default function ProjectTree({
           )}
           style={{ paddingLeft: `${8 + depth * 16}px` }}
         >
+          {handle}
           {kids.length > 0 ? (
             <button
               type="button"
@@ -184,22 +308,51 @@ export default function ProjectTree({
             </DropdownMenu>
           </div>
         )}
-        {!isCollapsed && kids.map((k) => row(k, depth + 1))}
-      </div>
+      </>
     );
   };
 
+  // Each sibling group is its own sortable list; the subtree travels with
+  // its row because it is rendered inside the same sortable node.
+  const group = (items: Project[], depth: number) => (
+    <SortableContext
+      items={items.map((p) => p.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      {items.map((p) => (
+        <TreeRow
+          key={p.id}
+          project={p}
+          depth={depth}
+          canDrag={!!onReorder && items.length > 1}
+          render={renderRow}
+        >
+          {!collapsed.has(p.id) &&
+            childrenOf(p.id).length > 0 &&
+            group(childrenOf(p.id), depth + 1)}
+        </TreeRow>
+      ))}
+    </SortableContext>
+  );
+
   return (
     <div>
-      <div className="space-y-0.5">
-        {top.map((p) => row(p, 0))}
-        {orphans.map((p) => row(p, 0))}
-        {top.length === 0 && orphans.length === 0 && (
-          <div className="text-sm text-gray-500 px-2 py-4">
-            No projects yet.
-          </div>
-        )}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={restrictToVerticalAxisIfAvailable}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="space-y-0.5">
+          {group(top, 0)}
+          {orphans.length > 0 && group(orphans, 0)}
+          {top.length === 0 && orphans.length === 0 && (
+            <div className="text-sm text-gray-500 px-2 py-4">
+              No projects yet.
+            </div>
+          )}
+        </div>
+      </DndContext>
       <label className="mt-3 flex items-center gap-2 text-xs text-gray-500 px-2">
         <Checkbox
           checked={showInactive}

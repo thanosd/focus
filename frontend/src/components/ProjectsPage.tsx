@@ -25,6 +25,11 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
     addTag,
   } = useProjectsAndTags();
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  // Optimistic sort_order overrides (id → position) applied on top of the
+  // loaded lists while a drag-and-drop reorder is in flight.
+  const [sortOverrides, setSortOverrides] = useState<Record<string, number>>(
+    {},
+  );
   const [showInactive, setShowInactive] = useState(false);
   const [creating, setCreating] = useState(false);
   // Bumped after tree-menu changes so the open ProjectView reloads.
@@ -48,7 +53,57 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
     reload();
   }, [reload]);
 
-  const treeProjects = showInactive ? allProjects : activeProjects;
+  const withOverrides = (list: Project[]) =>
+    list.map((p) =>
+      p.id in sortOverrides ? { ...p, sort_order: sortOverrides[p.id] } : p,
+    );
+  const treeProjects = withOverrides(
+    showInactive ? allProjects : activeProjects,
+  );
+
+  // Drop `moved` next to `over` among their (full) sibling list, hidden
+  // siblings included so they keep a sensible position, then persist.
+  const reorderProjects = async (
+    moved: Project,
+    over: Project,
+    after: boolean,
+  ) => {
+    const source = allProjects.length > 0 ? allProjects : activeProjects;
+    const siblings = withOverrides(source)
+      .filter((p) => (p.parent_id ?? null) === (moved.parent_id ?? null))
+      .sort(
+        (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
+      )
+      .filter((p) => p.id !== moved.id);
+    const at = siblings.findIndex((p) => p.id === over.id);
+    if (at < 0) return;
+    siblings.splice(after ? at + 1 : at, 0, moved);
+    const ids = siblings.map((p) => p.id);
+    const previous = sortOverrides;
+    setSortOverrides((o) => {
+      const next = { ...o };
+      ids.forEach((id, i) => {
+        next[id] = i;
+      });
+      return next;
+    });
+    const { data, error } = await apiClient.POST("/api/projects/reorder", {
+      body: { project_ids: ids },
+    });
+    if (error || !data) {
+      setSortOverrides(previous);
+      toast(errorMessage(error, "Couldn't reorder projects"), "error");
+      return;
+    }
+    setSortOverrides((o) => {
+      const next = { ...o };
+      data.forEach((p) => {
+        next[p.id] = p.sort_order;
+      });
+      return next;
+    });
+    reload();
+  };
 
   const setStatus = async (project: Project, status: ProjectStatus) => {
     if (status === "completed" || status === "dropped") {
@@ -133,6 +188,7 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
               onToggleInactive={setShowInactive}
               onSetStatus={setStatus}
               onDelete={deleteProject}
+              onReorder={reorderProjects}
             />
           )}
         </div>
