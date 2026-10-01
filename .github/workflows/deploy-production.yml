@@ -35,7 +35,7 @@ env:
   CORS_ORIGINS: https://focus.cosmicteacups.com
   # Temporal worker (nightly maintenance). Requires the focus-temporal
   # namespace to be healthy; see docs/deploy/setup-checklist.md step 8.
-  WORKER_ENABLED: "false"
+  WORKER_ENABLED: "true"
 
 permissions:
   contents: read
@@ -132,8 +132,12 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.ECR_REGISTRY }}/focus-backend
+          # The sha tag must outrank `latest` (raw tags default to priority
+          # 200, sha to 100) so the `version` output — which becomes the Helm
+          # image tag — changes every commit. With `latest` as the version the
+          # pod template never changed and nothing rolled out.
           tags: |
-            type=sha,prefix=main-
+            type=sha,prefix=main-,priority=1000
             type=raw,value=latest
 
       - name: Build and push
@@ -201,8 +205,12 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.ECR_REGISTRY }}/focus-frontend
+          # The sha tag must outrank `latest` (raw tags default to priority
+          # 200, sha to 100) so the `version` output — which becomes the Helm
+          # image tag — changes every commit. With `latest` as the version the
+          # pod template never changed and nothing rolled out.
           tags: |
-            type=sha,prefix=main-
+            type=sha,prefix=main-,priority=1000
             type=raw,value=latest
 
       - name: Build and push
