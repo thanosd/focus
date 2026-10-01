@@ -1,0 +1,160 @@
+# Temporal for focus — PostgreSQL persistence on the shared Cosmic RDS.
+# Copy this file to temporal-values.yaml and fill in the placeholders below.
+#
+# Uses the official temporalio/temporal Helm chart (>= 1.0.0; setup-cluster.sh
+# pins 1.4.0 / server 1.31). `temporalio/auto-setup` is DEPRECATED. The old
+# top-level `cassandra:` / `prometheus:` / `elasticsearch:` sub-chart keys and
+# the old `server.config.persistence.{default,visibility}.sql` layout were
+# REMOVED in v1.0.0-rc.2 — persistence now lives under
+# `server.config.persistence.datastores`. See the chart's UPGRADING.md.
+#
+# The "focus_" prefix keeps these DBs isolated on the shared RDS.
+# Fill in: REPLACE_WITH_RDS_ENDPOINT (host only) and REPLACE_WITH_TEMPORAL_PASSWORD.
+
+server:
+  replicaCount: 1
+
+  # Graviton migration: run the server roles (frontend/history/matching/
+  # worker) on the arm64 pool (tainted arch=arm64:NoSchedule). All images
+  # in this file are multi-arch (server 1.31.1 / admin-tools 1.31 /
+  # ui 2.51.1 publish linux/arm64). Rollback: set nodeSelector {} and
+  # tolerations [] here and re-run the helm upgrade — pods reschedule
+  # onto x86 with no image change.
+  nodeSelector:
+    kubernetes.io/arch: arm64
+  tolerations:
+    - key: arch
+      value: arm64
+      effect: NoSchedule
+
+  config:
+    persistence:
+      defaultStore: default
+      visibilityStore: visibility
+      # CRITICAL: numHistoryShards is fixed at cluster creation and CANNOT be
+      # changed later without data corruption. 512 is the chart's historical
+      # implicit default — what this cluster was originally provisioned with.
+      # Do NOT change on the live focus-temporal cluster.
+      numHistoryShards: 512
+      datastores:
+        default:
+          sql:
+            # The DBs are pre-created (backend/migrations + setup docs), so the
+            # chart neither needs nor has permission to. manageSchema=true lets
+            # its setup/update-schema jobs run against the empty DBs.
+            createDatabase: false
+            manageSchema: true
+            pluginName: postgres12
+            driverName: postgres12
+            databaseName: focus_temporal
+            connectProtocol: tcp
+            # host:port — replace the host, keep :5432.
+            connectAddr: "REPLACE_WITH_RDS_ENDPOINT:5432"
+            user: "focus_temporal"
+            # Password comes from a k8s Secret we own (setup-cluster.sh mirrors it
+            # from Secrets Manager focus/temporal) — NOT the chart's inline-
+            # password hook Secret, which vanishes on interrupted/rolled-back upgrades.
+            existingSecret: temporal-postgres-credentials
+            secretKey: password
+            # Shared Cosmic RDS: these pools apply PER server role
+            # (frontend/history/matching/worker), so keep them small or idle
+            # connections exhaust the RDS slot limit.
+            maxConns: 6
+            maxIdleConns: 2
+            tls:
+              enabled: true
+              enableHostVerification: false
+        visibility:
+          sql:
+            createDatabase: false
+            manageSchema: true
+            pluginName: postgres12
+            driverName: postgres12
+            databaseName: focus_temporal_visibility
+            connectProtocol: tcp
+            connectAddr: "REPLACE_WITH_RDS_ENDPOINT:5432"
+            user: "focus_temporal"
+            existingSecret: temporal-postgres-credentials
+            secretKey: password
+            maxConns: 6
+            maxIdleConns: 2
+            tls:
+              enabled: true
+              enableHostVerification: false
+
+  # Per-role resource requests. Memory from the cluster VPA/Goldilocks data
+  # (history is the heavy role). CPU requests deliberately small (2026-08):
+  # measured node CPU utilization is single-digit %, and inflated CPU
+  # reservations were forcing needless autoscaler node additions. No CPU
+  # limits, so bursting is unaffected.
+  frontend:
+    replicaCount: 1
+    resources:
+      requests: { cpu: 10m, memory: 128Mi }
+      limits: { memory: 512Mi }
+  matching:
+    replicaCount: 1
+    resources:
+      requests: { cpu: 10m, memory: 128Mi }
+      limits: { memory: 512Mi }
+  worker:
+    replicaCount: 1
+    resources:
+      requests: { cpu: 10m, memory: 128Mi }
+      limits: { memory: 512Mi }
+  # history is the heavy role (512-shard in-memory state floors it ~350-400Mi).
+  # Live usage ~376Mi → request 512Mi; limit stays generous for load spikes.
+  history:
+    replicaCount: 1
+    resources:
+      requests: { cpu: 50m, memory: 512Mi }
+      limits: { memory: 1536Mi }
+
+web:
+  enabled: true
+  replicaCount: 1
+  # Read-only UI — live usage ~6Mi, so a small request is plenty.
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { memory: 256Mi }
+  nodeSelector:
+    kubernetes.io/arch: arm64
+  tolerations:
+    - key: arch
+      value: arm64
+      effect: NoSchedule
+  service:
+    type: ClusterIP
+    port: 8080
+
+admintools:
+  enabled: true
+  # Previously BestEffort — idle utility pod.
+  resources:
+    requests: { cpu: 10m, memory: 128Mi }
+    limits: { memory: 256Mi }
+  # Pinned to arm64 like everything else so nothing persistent squats on
+  # the retiring x86 pool. Note the chart's pre-upgrade schema jobs
+  # (server-job.yaml) inherit this admintools scheduling, so they also
+  # require an arm64 slot — worst case they wait ~70s for the cluster
+  # autoscaler, well inside helm's 10m timeout (onejump runs this way).
+  nodeSelector:
+    kubernetes.io/arch: arm64
+  tolerations:
+    - key: arch
+      value: arm64
+      effect: NoSchedule
+  image:
+    repository: temporalio/admin-tools
+    # MUST match/exceed the chart's server appVersion (1.31 for chart 1.4.0), or
+    # the manage-schema job applies a schema older than the server expects and
+    # the server refuses to start ("schema version compatibility check failed").
+    tag: "1.31"
+    pullPolicy: IfNotPresent
+
+# admintools 1.30+ dropped the dockerize entrypoint shim and the bundled
+# elasticsearch-tool; the chart's shim wrappers point at binaries that no longer
+# exist and break the image.
+shims:
+  dockerize: false
+  elasticsearchTool: false

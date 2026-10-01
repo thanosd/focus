@@ -1,0 +1,20 @@
+# Common schemas used across all APIs
+
+Error:
+  type: object
+  required:
+    - message
+  properties:
+    message:
+      type: string
+      description: Error message
+      example: An error occurred
+
+OkResponse:
+  type: object
+  required:
+    - ok
+  properties:
+    ok:
+      type: boolean
+      example: true

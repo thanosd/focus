@@ -1,0 +1,37 @@
+{
+  "name": "focus-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "generate:api": "openapi-typescript ../api/openapi.yaml -o ./src/lib/api-types.ts"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "next": "^16.3.3",
+    "openapi-fetch": "^0.15.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "baseline-browser-mapping": "^2.9.16",
+    "eslint": "^9",
+    "eslint-config-next": "^16",
+    "openapi-typescript": "^7.4.4",
+    "postcss": "^8.5.13",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.3"
+  },
+  "overrides": {
+    "js-yaml": "^4.1.0",
+    "postcss": "^8.5.13"
+  }
+}

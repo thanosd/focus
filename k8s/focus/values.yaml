@@ -1,0 +1,120 @@
+# Default values for the focus chart. Secrets come from AWS Secrets
+# Manager at deploy time (see .github/workflows/deploy-production.yml).
+
+namespace: focus
+
+# ServiceAccount the pods run under (created by infra/ Pulumi).
+serviceAccount:
+  name: focus
+
+imageRegistry: 131925870818.dkr.ecr.us-east-1.amazonaws.com
+imagePullSecrets: []
+
+# Arch scheduling — every pod targets the arm64 (Graviton) pool, which
+# is tainted arch=arm64:NoSchedule. Images are multi-arch; to fall back
+# to x86 set these to {} / [].
+nodeSelector:
+  kubernetes.io/arch: arm64
+tolerations:
+  - key: arch
+    value: arm64
+    effect: NoSchedule
+
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: focus-backend
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: 15m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+  env:
+    ENVIRONMENT: production
+    PROJECT_NAME: Focus API
+    VERSION: 0.1.0
+    CLAUDE_MODEL: claude-opus-5
+
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: focus-frontend
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 15m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    NODE_ENV: production
+
+worker:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: focus-backend
+    tag: latest
+    pullPolicy: Always
+  temporal:
+    host: temporal-frontend.focus-temporal.svc.cluster.local:7233
+    namespace: focus
+  resources:
+    requests:
+      cpu: 10m
+      memory: 96Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: focus.cosmicteacups.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+    - host: focus-api.cosmicteacups.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: backend
+  tls:
+    - secretName: focus-tls
+      hosts:
+        - focus.cosmicteacups.com
+        - focus-api.cosmicteacups.com
+
+# Secrets — populated from AWS Secrets Manager (cosmic/focus/production)
+# by the deploy workflow, which camelCases each key. Non-secret settings
+# (CORS origins, URLs) are also passed through this block for one wiring path.
+secrets:
+  databaseUrl: ""
+  corsOrigins: ""
+  frontendUrl: ""
+  apiUrl: ""
+  nextPublicApiUrl: ""
+  googleClientId: ""
+  googleClientSecret: ""
+  authAllowedEmails: ""
+  csrfAuthKey: ""
+  claudeApiKey: ""
+  nextServerActionsEncryptionKey: ""

@@ -1,0 +1,67 @@
+# Environment variables
+.env
+.env.*
+!.env.sample
+.envrc
+infra/config.env
+k8s/config.env
+
+# Session-local files (per-worktree, not committed)
+CLAUDE.local.md
+
+# Cache
+.cache
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Pulumi
+infra/.pulumi/
+infra/Pulumi.*.yaml
+!infra/Pulumi.yaml
+
+# Deployment artifacts
+instance-ip.txt
+db-host.txt
+db-password.txt
+
+# SSH Keys - NEVER commit private keys!
+*.pem
+*.key
+id_rsa
+id_ed25519
+!*.pub
+
+# Agent runtime
+.beads/
+.runtime/
+
+# Claude Code - ignore agent runtime, keep project config
+.claude/*
+!.claude/commands/
+!.claude/hooks/
+!.claude/settings.json
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.out
+/backend/focus
+/backend/tmp/

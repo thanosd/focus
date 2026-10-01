@@ -1,0 +1,242 @@
+# Project endpoints
+
+/api/projects:
+  get:
+    tags:
+      - projects
+    summary: List projects
+    description: Flat list ordered by depth then sort_order; nest client-side using parent_id.
+    operationId: listProjects
+    parameters:
+      - name: status
+        in: query
+        required: false
+        description: Filter by status; omit for active + on_hold
+        schema:
+          type: string
+          enum: [active, on_hold, completed, dropped, all]
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../schemas/tasks.yaml#/Project
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  post:
+    tags:
+      - projects
+    summary: Create a project
+    operationId: createProject
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/CreateProjectRequest
+    responses:
+      "201":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Project
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/projects/{projectId}:
+  get:
+    tags:
+      - projects
+    summary: Get a project with its tasks and children
+    operationId: getProject
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        description: Project ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/ProjectDetail
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  patch:
+    tags:
+      - projects
+    summary: Update a project
+    operationId: updateProject
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        description: Project ID
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/UpdateProjectRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Project
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  delete:
+    tags:
+      - projects
+    summary: Delete a project
+    description: Deletes the project, its child projects and all of their tasks.
+    operationId: deleteProject
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        description: Project ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/OkResponse
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/projects/{projectId}/review:
+  post:
+    tags:
+      - projects
+    summary: Mark a project as reviewed
+    description: Stamps last_reviewed_at and schedules the next review review_interval_days later.
+    operationId: reviewProject
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        description: Project ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Project
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/reviews:
+  get:
+    tags:
+      - projects
+    summary: Projects due for review
+    operationId: listReviews
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/ReviewResponse
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []

@@ -1,0 +1,227 @@
+# Authentication, user and API token endpoints.
+#
+# The Google OAuth redirect endpoints (/api/auth/google/login and
+# /api/auth/google/callback) are browser navigations, not JSON calls, so
+# they are documented here but not called through the typed client.
+
+/api/auth/google/login:
+  get:
+    tags:
+      - auth
+    summary: Start Google sign-in
+    description: Redirects the browser to Google. Pass ?redirect=/path to land somewhere specific after sign-in.
+    operationId: googleLogin
+    parameters:
+      - name: redirect
+        in: query
+        required: false
+        description: Frontend path to return to after sign-in
+        schema:
+          type: string
+    responses:
+      "302":
+        description: Redirect to Google
+    security: []
+
+/api/auth/google/callback:
+  get:
+    tags:
+      - auth
+    summary: Google OAuth callback
+    description: Exchanges the code, verifies the ID token, enforces the email allowlist, sets the session cookie and redirects to the frontend.
+    operationId: googleCallback
+    responses:
+      "302":
+        description: Redirect to the frontend (or to /login?error=... on failure)
+    security: []
+
+/api/auth/logout:
+  post:
+    tags:
+      - auth
+    summary: Log out
+    operationId: logout
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/OkResponse
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/auth/me:
+  get:
+    tags:
+      - auth
+    summary: Current user
+    operationId: getMe
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/auth.yaml#/MeResponse
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/user-preferences:
+  get:
+    tags:
+      - auth
+    summary: Get user preferences
+    operationId: getUserPreferences
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/auth.yaml#/UserPreferences
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  patch:
+    tags:
+      - auth
+    summary: Update user preferences
+    operationId: updateUserPreferences
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/auth.yaml#/UpdateUserPreferencesRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/auth.yaml#/UserPreferences
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/api-tokens:
+  get:
+    tags:
+      - auth
+    summary: List API tokens
+    operationId: listApiTokens
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../schemas/auth.yaml#/ApiToken
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  post:
+    tags:
+      - auth
+    summary: Create an API token
+    description: Creates a personal API token for MCP clients. The secret is returned once.
+    operationId: createApiToken
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/auth.yaml#/CreateApiTokenRequest
+    responses:
+      "201":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/auth.yaml#/CreateApiTokenResponse
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/api-tokens/{tokenId}:
+  delete:
+    tags:
+      - auth
+    summary: Revoke an API token
+    operationId: deleteApiToken
+    parameters:
+      - name: tokenId
+        in: path
+        required: true
+        description: API token ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/OkResponse
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []

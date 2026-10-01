@@ -1,0 +1,12 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "true"
+
+entrypoint = ["/bin/sh", "./run-backend.sh"]
+
+exclude_dir = ["tmp", "vendor", ".git"]
+
+[log]
+time = true

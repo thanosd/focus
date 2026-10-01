@@ -1,0 +1,7 @@
+# oapi-codegen configuration for generating Go types from OpenAPI spec
+# Uses the bundled OpenAPI spec (all external refs resolved into single file)
+package: api
+generate:
+  models: true
+  embedded-spec: false
+output: internal/api/types.go

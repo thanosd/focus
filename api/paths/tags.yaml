@@ -1,0 +1,139 @@
+# Tag endpoints
+
+/api/tags:
+  get:
+    tags:
+      - tags
+    summary: List tags
+    operationId: listTags
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../schemas/tasks.yaml#/Tag
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  post:
+    tags:
+      - tags
+    summary: Create a tag
+    operationId: createTag
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/CreateTagRequest
+    responses:
+      "201":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Tag
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/tags/{tagId}:
+  patch:
+    tags:
+      - tags
+    summary: Update a tag
+    operationId: updateTag
+    parameters:
+      - name: tagId
+        in: path
+        required: true
+        description: Tag ID
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/UpdateTagRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Tag
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  delete:
+    tags:
+      - tags
+    summary: Delete a tag
+    operationId: deleteTag
+    parameters:
+      - name: tagId
+        in: path
+        required: true
+        description: Tag ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/OkResponse
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []

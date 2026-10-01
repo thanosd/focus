@@ -1,0 +1,424 @@
+# Task endpoints
+
+/api/tasks:
+  get:
+    tags:
+      - tasks
+    summary: List tasks
+    description: Defaults to view=available when no filter is given.
+    operationId: listTasks
+    parameters:
+      - name: view
+        in: query
+        required: false
+        description: Named view. inbox = no project; available = active and not deferred; flagged = urgent; due = has a due date (soonest first); completed = recently completed; all = every active task
+        schema:
+          type: string
+          enum: [inbox, available, flagged, due, completed, all]
+      - name: project_id
+        in: query
+        required: false
+        description: Only tasks in this project
+        schema:
+          type: string
+          format: uuid
+      - name: tag_id
+        in: query
+        required: false
+        description: Only tasks carrying this tag
+        schema:
+          type: string
+          format: uuid
+      - name: q
+        in: query
+        required: false
+        description: Case-insensitive title/note search
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../schemas/tasks.yaml#/Task
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  post:
+    tags:
+      - tasks
+    summary: Create a task
+    description: Creates a task. Without project_id it lands in the inbox.
+    operationId: createTask
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/CreateTaskRequest
+    responses:
+      "201":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Task
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/tasks/{taskId}:
+  get:
+    tags:
+      - tasks
+    summary: Get a task
+    operationId: getTask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Task
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  patch:
+    tags:
+      - tasks
+    summary: Update a task
+    operationId: updateTask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/UpdateTaskRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Task
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+  delete:
+    tags:
+      - tasks
+    summary: Delete a task
+    operationId: deleteTask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/OkResponse
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/tasks/{taskId}/complete:
+  post:
+    tags:
+      - tasks
+    summary: Complete a task
+    description: Marks the task completed. For repeating tasks the next occurrence is created and returned as next_task.
+    operationId: completeTask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/CompleteTaskResponse
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/tasks/{taskId}/drop:
+  post:
+    tags:
+      - tasks
+    summary: Drop a task
+    operationId: dropTask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Task
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/tasks/{taskId}/reopen:
+  post:
+    tags:
+      - tasks
+    summary: Reopen a completed or dropped task
+    operationId: reopenTask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Task
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/tasks/{taskId}/defer:
+  post:
+    tags:
+      - tasks
+    summary: Defer a task
+    description: Sets defer_until from a natural-language phrase ("1w", "next monday", "in 3 days"), an explicit timestamp, or clears it.
+    operationId: deferTask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/DeferTaskRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Task
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/dates/parse:
+  post:
+    tags:
+      - tasks
+    summary: Parse a natural-language date
+    description: Resolves a phrase to a timestamp using the rule-based parser, falling back to Claude for anything it cannot handle.
+    operationId: parseDate
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/ParseDateRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/ParseDateResponse
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/counts:
+  get:
+    tags:
+      - tasks
+    summary: Sidebar badge counts
+    operationId: getCounts
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Counts
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []

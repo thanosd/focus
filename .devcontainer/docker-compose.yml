@@ -1,0 +1,73 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    ports:
+      - 8003:8000
+      - 3003:3000
+    depends_on:
+      - db
+
+  db:
+    image: postgres:${POSTGRESQL_VERSION:-18}
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: focus
+      POSTGRES_USER: postgres
+    ports:
+      - 5403:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  temporal:
+    image: temporalio/auto-setup:${TEMPORAL_VERSION:-1.31.1}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 7234:7233 # Temporal gRPC
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-rootpassword}
+      - POSTGRES_SEEDS=db
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+      - SKIP_DEFAULT_NAMESPACE_CREATION=false
+      - SKIP_SCHEMA_SETUP=false
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+    healthcheck:
+      test: [CMD, tctl, --namespace, default, namespace, describe]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  temporal-ui:
+    image: temporalio/ui:${TEMPORAL_UI_VERSION:-2.51.1}
+    restart: unless-stopped
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - 8083:8080
+
+volumes:
+  postgres-data:

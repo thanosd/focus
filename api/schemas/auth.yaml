@@ -1,0 +1,103 @@
+# Authentication and user schemas
+
+User:
+  type: object
+  required:
+    - id
+    - email
+    - timezone
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    email:
+      type: string
+      format: email
+    name:
+      type: string
+      description: Display name from the Google profile
+    picture_url:
+      type: string
+      description: Google profile picture URL
+    timezone:
+      type: string
+      description: IANA timezone used to resolve natural-language dates
+      example: America/New_York
+    last_login_at:
+      type: string
+      format: date-time
+    created_at:
+      type: string
+      format: date-time
+
+MeResponse:
+  type: object
+  required:
+    - user
+  properties:
+    user:
+      $ref: "#/User"
+
+UserPreferences:
+  type: object
+  required:
+    - timezone
+  properties:
+    timezone:
+      type: string
+      example: America/New_York
+
+UpdateUserPreferencesRequest:
+  type: object
+  properties:
+    timezone:
+      type: string
+      example: America/New_York
+
+ApiToken:
+  type: object
+  description: A personal API token used to authenticate MCP clients. The secret is only returned once, at creation.
+  required:
+    - id
+    - name
+    - token_prefix
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: Claude Code on laptop
+    token_prefix:
+      type: string
+      description: First characters of the token, for display
+      example: fcs_ab12
+    last_used_at:
+      type: string
+      format: date-time
+    created_at:
+      type: string
+      format: date-time
+
+CreateApiTokenRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      example: Claude Code on laptop
+
+CreateApiTokenResponse:
+  type: object
+  required:
+    - token
+    - api_token
+  properties:
+    token:
+      type: string
+      description: The full secret token. Shown once; store it in your MCP client config.
+    api_token:
+      $ref: "#/ApiToken"

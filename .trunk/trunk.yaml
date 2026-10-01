@@ -1,0 +1,80 @@
+# This file controls the behavior of Trunk: https://docs.trunk.io/cli
+# To learn more about the format of this file, see https://docs.trunk.io/reference/trunk-yaml
+version: 0.1
+cli:
+  version: 1.25.0
+# Trunk provides extensibility via plugins. (https://docs.trunk.io/plugins)
+plugins:
+  sources:
+    - id: trunk
+      ref: v1.7.3
+      uri: https://github.com/trunk-io/plugins
+# Many linters and tools depend on runtimes - configure them here. (https://docs.trunk.io/runtimes)
+runtimes:
+  enabled:
+    - go@1.26.1
+    - node@22.16.0
+    - python@3.10.8
+# This is the section where you manage your linters. (https://docs.trunk.io/check/configuration)
+lint:
+  definitions:
+    # Same override as team-metrics: osv-scanner's Go call-analysis needs a
+    # govulncheck that understands go1.26. Until it ships, run lockfile
+    # scanning only. Delete this whole definition to restore the plugin
+    # default once govulncheck supports go1.26.
+    - name: osv-scanner
+      files: [lockfile]
+      tools: [osv-scanner]
+      commands:
+        - name: scan
+          output: sarif
+          run: osv-scanner --lockfile=${target} --format json --no-call-analysis=all
+          success_codes: [0, 1, 128]
+          read_output_from: stdout
+          is_security: true
+          parser:
+            runtime: python
+            run: python3 ${plugin}/linters/osv-scanner/osv_to_sarif.py
+      direct_configs:
+        - osv-scanner.toml
+      issue_url_format: https://osv.dev/{}
+      suggest_if: files_present
+      environment:
+        - name: PATH
+          list: ["${linter}", "${env.PATH}"]
+  ignore:
+    - linters: [checkov, yamllint]
+      paths:
+        - api/openapi-bundled.yaml
+    - linters: [markdownlint]
+      paths:
+        - .claude/commands/**
+    - linters: [shellcheck]
+      paths:
+        - .claude/hooks/**
+    - linters: [ALL]
+      paths:
+        - frontend/src/lib/api-types.ts
+        - backend/internal/api/types.go
+  enabled:
+    - actionlint@1.7.8
+    - dotenv-linter@3.3.0
+    - gofmt@1.20.4
+    - golangci-lint2@2.6.1
+    - osv-scanner@2.2.4
+    - hadolint@2.14.0
+    - shellcheck@0.11.0
+    - shfmt@3.6.0
+    - taplo@0.10.0
+    - checkov@3.2.490
+    - git-diff-check
+    - markdownlint@0.45.0
+    - prettier@3.6.2
+    - trufflehog@3.90.13
+    - yamllint@1.37.1
+actions:
+  enabled:
+    - trunk-announce
+    - trunk-check-pre-push
+    - trunk-fmt-pre-commit
+    - trunk-upgrade-available

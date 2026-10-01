@@ -1,0 +1,9 @@
+# Kubernetes deployment secrets and configs
+values-override.yaml
+kubeconfig.yaml
+config.env
+secrets-values.yaml
+helm-values.yaml
+
+# Helm charts
+*.tgz

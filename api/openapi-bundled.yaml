@@ -1,0 +1,1588 @@
+openapi: 3.1.0
+info:
+  title: Focus API
+  description: Personal task management (projects, tasks, tags, reviews) with Google sign-in and an MCP server.
+  version: 1.0.0
+  contact:
+    name: Cosmic Teacups
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://focus-api.cosmicteacups.com
+    description: Production server
+security:
+  - cookieAuth: []
+tags:
+  - name: auth
+    description: Authentication, user preferences and API tokens
+  - name: tasks
+    description: Tasks, inbox, deferral and date parsing
+  - name: projects
+    description: Projects and reviews
+  - name: tags
+    description: Tags
+paths:
+  /api/auth/google/login:
+    get:
+      tags:
+        - auth
+      summary: Start Google sign-in
+      description: Redirects the browser to Google. Pass ?redirect=/path to land somewhere specific after sign-in.
+      operationId: googleLogin
+      parameters:
+        - name: redirect
+          in: query
+          required: false
+          description: Frontend path to return to after sign-in
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to Google
+      security: []
+  /api/auth/google/callback:
+    get:
+      tags:
+        - auth
+      summary: Google OAuth callback
+      description: Exchanges the code, verifies the ID token, enforces the email allowlist, sets the session cookie and redirects to the frontend.
+      operationId: googleCallback
+      responses:
+        '302':
+          description: Redirect to the frontend (or to /login?error=... on failure)
+      security: []
+  /api/auth/logout:
+    post:
+      tags:
+        - auth
+      summary: Log out
+      operationId: logout
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/auth/me:
+    get:
+      tags:
+        - auth
+      summary: Current user
+      operationId: getMe
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/user-preferences:
+    get:
+      tags:
+        - auth
+      summary: Get user preferences
+      operationId: getUserPreferences
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    patch:
+      tags:
+        - auth
+      summary: Update user preferences
+      operationId: updateUserPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserPreferencesRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/api-tokens:
+    get:
+      tags:
+        - auth
+      summary: List API tokens
+      operationId: listApiTokens
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiToken'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    post:
+      tags:
+        - auth
+      summary: Create an API token
+      description: Creates a personal API token for MCP clients. The secret is returned once.
+      operationId: createApiToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiTokenRequest'
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateApiTokenResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/api-tokens/{tokenId}:
+    delete:
+      tags:
+        - auth
+      summary: Revoke an API token
+      operationId: deleteApiToken
+      parameters:
+        - name: tokenId
+          in: path
+          required: true
+          description: API token ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tasks:
+    get:
+      tags:
+        - tasks
+      summary: List tasks
+      description: Defaults to view=available when no filter is given.
+      operationId: listTasks
+      parameters:
+        - name: view
+          in: query
+          required: false
+          description: Named view. inbox = no project; available = active and not deferred; flagged = urgent; due = has a due date (soonest first); completed = recently completed; all = every active task
+          schema:
+            type: string
+            enum:
+              - inbox
+              - available
+              - flagged
+              - due
+              - completed
+              - all
+        - name: project_id
+          in: query
+          required: false
+          description: Only tasks in this project
+          schema:
+            type: string
+            format: uuid
+        - name: tag_id
+          in: query
+          required: false
+          description: Only tasks carrying this tag
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive title/note search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    post:
+      tags:
+        - tasks
+      summary: Create a task
+      description: Creates a task. Without project_id it lands in the inbox.
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tasks/{taskId}:
+    get:
+      tags:
+        - tasks
+      summary: Get a task
+      operationId: getTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    patch:
+      tags:
+        - tasks
+      summary: Update a task
+      operationId: updateTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    delete:
+      tags:
+        - tasks
+      summary: Delete a task
+      operationId: deleteTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tasks/{taskId}/complete:
+    post:
+      tags:
+        - tasks
+      summary: Complete a task
+      description: Marks the task completed. For repeating tasks the next occurrence is created and returned as next_task.
+      operationId: completeTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteTaskResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tasks/{taskId}/drop:
+    post:
+      tags:
+        - tasks
+      summary: Drop a task
+      operationId: dropTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tasks/{taskId}/reopen:
+    post:
+      tags:
+        - tasks
+      summary: Reopen a completed or dropped task
+      operationId: reopenTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tasks/{taskId}/defer:
+    post:
+      tags:
+        - tasks
+      summary: Defer a task
+      description: Sets defer_until from a natural-language phrase ("1w", "next monday", "in 3 days"), an explicit timestamp, or clears it.
+      operationId: deferTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeferTaskRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/dates/parse:
+    post:
+      tags:
+        - tasks
+      summary: Parse a natural-language date
+      description: Resolves a phrase to a timestamp using the rule-based parser, falling back to Claude for anything it cannot handle.
+      operationId: parseDate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParseDateRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseDateResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/counts:
+    get:
+      tags:
+        - tasks
+      summary: Sidebar badge counts
+      operationId: getCounts
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Counts'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/projects:
+    get:
+      tags:
+        - projects
+      summary: List projects
+      description: Flat list ordered by depth then sort_order; nest client-side using parent_id.
+      operationId: listProjects
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filter by status; omit for active + on_hold
+          schema:
+            type: string
+            enum:
+              - active
+              - on_hold
+              - completed
+              - dropped
+              - all
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    post:
+      tags:
+        - projects
+      summary: Create a project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/projects/{projectId}:
+    get:
+      tags:
+        - projects
+      summary: Get a project with its tasks and children
+      operationId: getProject
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetail'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    patch:
+      tags:
+        - projects
+      summary: Update a project
+      operationId: updateProject
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    delete:
+      tags:
+        - projects
+      summary: Delete a project
+      description: Deletes the project, its child projects and all of their tasks.
+      operationId: deleteProject
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/projects/{projectId}/review:
+    post:
+      tags:
+        - projects
+      summary: Mark a project as reviewed
+      description: Stamps last_reviewed_at and schedules the next review review_interval_days later.
+      operationId: reviewProject
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/reviews:
+    get:
+      tags:
+        - projects
+      summary: Projects due for review
+      operationId: listReviews
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tags:
+    get:
+      tags:
+        - tags
+      summary: List tags
+      operationId: listTags
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    post:
+      tags:
+        - tags
+      summary: Create a tag
+      operationId: createTag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTagRequest'
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+  /api/tags/{tagId}:
+    patch:
+      tags:
+        - tags
+      summary: Update a tag
+      operationId: updateTag
+      parameters:
+        - name: tagId
+          in: path
+          required: true
+          description: Tag ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTagRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+    delete:
+      tags:
+        - tags
+      summary: Delete a tag
+      operationId: deleteTag
+      parameters:
+        - name: tagId
+          in: path
+          required: true
+          description: Tag ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - cookieAuth: []
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: An error occurred
+    OkResponse:
+      type: object
+      required:
+        - ok
+      properties:
+        ok:
+          type: boolean
+          example: true
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - timezone
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          description: Display name from the Google profile
+        picture_url:
+          type: string
+          description: Google profile picture URL
+        timezone:
+          type: string
+          description: IANA timezone used to resolve natural-language dates
+          example: America/New_York
+        last_login_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    MeResponse:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+    UserPreferences:
+      type: object
+      required:
+        - timezone
+      properties:
+        timezone:
+          type: string
+          example: America/New_York
+    UpdateUserPreferencesRequest:
+      type: object
+      properties:
+        timezone:
+          type: string
+          example: America/New_York
+    ApiToken:
+      type: object
+      description: A personal API token used to authenticate MCP clients. The secret is only returned once, at creation.
+      required:
+        - id
+        - name
+        - token_prefix
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Claude Code on laptop
+        token_prefix:
+          type: string
+          description: First characters of the token, for display
+          example: fcs_ab12
+        last_used_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    CreateApiTokenRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Claude Code on laptop
+    CreateApiTokenResponse:
+      type: object
+      required:
+        - token
+        - api_token
+      properties:
+        token:
+          type: string
+          description: The full secret token. Shown once; store it in your MCP client config.
+        api_token:
+          $ref: '#/components/schemas/ApiToken'
+    TaskStatus:
+      type: string
+      enum:
+        - active
+        - completed
+        - dropped
+    ProjectStatus:
+      type: string
+      enum:
+        - active
+        - on_hold
+        - completed
+        - dropped
+    RepeatUnit:
+      type: string
+      enum:
+        - day
+        - week
+        - month
+        - year
+    RepeatRule:
+      type: object
+      description: How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date.
+      required:
+        - every
+        - unit
+        - from
+      properties:
+        every:
+          type: integer
+          minimum: 1
+          example: 1
+        unit:
+          $ref: '#/components/schemas/RepeatUnit'
+        from:
+          type: string
+          enum:
+            - completion
+            - due
+          example: completion
+    Tag:
+      type: object
+      required:
+        - id
+        - name
+        - color
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: errands
+        color:
+          type: string
+          description: Hex color used for the tag chip
+          example: '#3b82f6'
+        active_task_count:
+          type: integer
+          description: Number of active tasks carrying this tag
+        created_at:
+          type: string
+          format: date-time
+    CreateTagRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+          example: '#3b82f6'
+    UpdateTagRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - note
+        - status
+        - flagged
+        - is_available
+        - tags
+        - sort_order
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+          description: Null for inbox tasks
+        project_name:
+          type: string
+        title:
+          type: string
+        note:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        flagged:
+          type: boolean
+          description: Urgent tasks are flagged and rendered prominently
+        defer_until:
+          type: string
+          format: date-time
+          description: Task is hidden from "available" views until this time
+        due_at:
+          type: string
+          format: date-time
+        repeat_rule:
+          $ref: '#/components/schemas/RepeatRule'
+        is_available:
+          type: boolean
+          description: Active, not deferred into the future, and its project is active
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        sort_order:
+          type: integer
+        completed_at:
+          type: string
+          format: date-time
+        dropped_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        note:
+          type: string
+        project_id:
+          type: string
+          format: uuid
+          description: Omit to put the task in the inbox
+        flagged:
+          type: boolean
+        defer_until:
+          type: string
+          format: date-time
+        due_at:
+          type: string
+          format: date-time
+        repeat_rule:
+          $ref: '#/components/schemas/RepeatRule'
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    UpdateTaskRequest:
+      type: object
+      description: Partial update. Send null for a nullable field to clear it.
+      properties:
+        title:
+          type: string
+        note:
+          type: string
+        project_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: Null moves the task back to the inbox
+        flagged:
+          type: boolean
+        defer_until:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        due_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        repeat_rule:
+          oneOf:
+            - $ref: '#/components/schemas/RepeatRule'
+            - type: 'null'
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        sort_order:
+          type: integer
+    DeferTaskRequest:
+      type: object
+      description: Provide exactly one of input (natural language) or until (explicit timestamp), or clear to remove the defer date.
+      properties:
+        input:
+          type: string
+          description: Natural-language deferral such as "1w", "next monday", "in 3 days" or "mid october"
+          example: next monday
+        until:
+          type: string
+          format: date-time
+        clear:
+          type: boolean
+        timezone:
+          type: string
+          description: Overrides the user's stored timezone for this parse
+          example: America/New_York
+    CompleteTaskResponse:
+      type: object
+      required:
+        - task
+      properties:
+        task:
+          $ref: '#/components/schemas/Task'
+        next_task:
+          description: The next occurrence created for a repeating task
+          allOf:
+            - $ref: '#/components/schemas/Task'
+    ParseDateRequest:
+      type: object
+      required:
+        - input
+      properties:
+        input:
+          type: string
+          example: next friday
+        kind:
+          type: string
+          enum:
+            - defer
+            - due
+          description: Picks the default time of day when the phrase has none (defer = start of day, due = 17:00)
+        timezone:
+          type: string
+          example: America/New_York
+        reference:
+          type: string
+          format: date-time
+          description: The reference "now" for relative phrases; defaults to the current time
+    ParseDateResponse:
+      type: object
+      required:
+        - resolved_at
+        - interpretation
+        - source
+      properties:
+        resolved_at:
+          type: string
+          format: date-time
+        interpretation:
+          type: string
+          description: Human-readable explanation of how the phrase was interpreted
+          example: Monday, October 5 at 12:00 AM
+        source:
+          type: string
+          enum:
+            - rules
+            - ai
+          description: Whether the deterministic parser or the AI fallback resolved the phrase
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - note
+        - status
+        - sequential
+        - review_interval_days
+        - depth
+        - sort_order
+        - remaining_task_count
+        - available_task_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          description: Set for second-level projects; null for top-level projects
+        name:
+          type: string
+        note:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        sequential:
+          type: boolean
+          description: When true, only the first remaining task is available
+        review_interval_days:
+          type: integer
+          example: 7
+        last_reviewed_at:
+          type: string
+          format: date-time
+        next_review_at:
+          type: string
+          format: date-time
+        depth:
+          type: integer
+          description: 0 for top-level, 1 for nested
+        sort_order:
+          type: integer
+        remaining_task_count:
+          type: integer
+        available_task_count:
+          type: integer
+        completed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProjectDetail:
+      type: object
+      required:
+        - project
+        - tasks
+        - children
+      properties:
+        project:
+          $ref: '#/components/schemas/Project'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        note:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+          description: Parent project; must itself be top-level (two levels max)
+        sequential:
+          type: boolean
+        review_interval_days:
+          type: integer
+          minimum: 1
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        note:
+          type: string
+        parent_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: Null moves the project to the top level
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        sequential:
+          type: boolean
+        review_interval_days:
+          type: integer
+          minimum: 1
+        sort_order:
+          type: integer
+    ReviewResponse:
+      type: object
+      required:
+        - due
+        - upcoming
+      properties:
+        due:
+          type: array
+          description: Projects whose next review date has passed, oldest first
+          items:
+            $ref: '#/components/schemas/Project'
+        upcoming:
+          type: array
+          description: Active projects not yet due for review, soonest first
+          items:
+            $ref: '#/components/schemas/Project'
+    Counts:
+      type: object
+      description: Badge counts for the sidebar
+      required:
+        - inbox
+        - flagged
+        - due_soon
+        - overdue
+        - review_due
+      properties:
+        inbox:
+          type: integer
+        flagged:
+          type: integer
+        due_soon:
+          type: integer
+          description: Available tasks due within the next 24 hours
+        overdue:
+          type: integer
+        review_due:
+          type: integer
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: Session ID cookie set after Google sign-in

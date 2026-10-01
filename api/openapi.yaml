@@ -1,0 +1,147 @@
+openapi: 3.1.0
+info:
+  title: Focus API
+  description: Personal task management (projects, tasks, tags, reviews) with Google sign-in and an MCP server.
+  version: 1.0.0
+  contact:
+    name: Cosmic Teacups
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://focus-api.cosmicteacups.com
+    description: Production server
+
+security:
+  - cookieAuth: []
+
+tags:
+  - name: auth
+    description: Authentication, user preferences and API tokens
+  - name: tasks
+    description: Tasks, inbox, deferral and date parsing
+  - name: projects
+    description: Projects and reviews
+  - name: tags
+    description: Tags
+
+paths:
+  # Auth
+  /api/auth/google/login:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1google~1login
+  /api/auth/google/callback:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1google~1callback
+  /api/auth/logout:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1logout
+  /api/auth/me:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1me
+  /api/user-preferences:
+    $ref: ./paths/auth.yaml#/~1api~1user-preferences
+  /api/api-tokens:
+    $ref: ./paths/auth.yaml#/~1api~1api-tokens
+  /api/api-tokens/{tokenId}:
+    $ref: ./paths/auth.yaml#/~1api~1api-tokens~1{tokenId}
+
+  # Tasks
+  /api/tasks:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks
+  /api/tasks/{taskId}:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}
+  /api/tasks/{taskId}/complete:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1complete
+  /api/tasks/{taskId}/drop:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1drop
+  /api/tasks/{taskId}/reopen:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1reopen
+  /api/tasks/{taskId}/defer:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1defer
+  /api/dates/parse:
+    $ref: ./paths/tasks.yaml#/~1api~1dates~1parse
+  /api/counts:
+    $ref: ./paths/tasks.yaml#/~1api~1counts
+
+  # Projects
+  /api/projects:
+    $ref: ./paths/projects.yaml#/~1api~1projects
+  /api/projects/{projectId}:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{projectId}
+  /api/projects/{projectId}/review:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{projectId}~1review
+  /api/reviews:
+    $ref: ./paths/projects.yaml#/~1api~1reviews
+
+  # Tags
+  /api/tags:
+    $ref: ./paths/tags.yaml#/~1api~1tags
+  /api/tags/{tagId}:
+    $ref: ./paths/tags.yaml#/~1api~1tags~1{tagId}
+
+components:
+  schemas:
+    Error:
+      $ref: ./schemas/common.yaml#/Error
+    OkResponse:
+      $ref: ./schemas/common.yaml#/OkResponse
+
+    User:
+      $ref: ./schemas/auth.yaml#/User
+    MeResponse:
+      $ref: ./schemas/auth.yaml#/MeResponse
+    UserPreferences:
+      $ref: ./schemas/auth.yaml#/UserPreferences
+    UpdateUserPreferencesRequest:
+      $ref: ./schemas/auth.yaml#/UpdateUserPreferencesRequest
+    ApiToken:
+      $ref: ./schemas/auth.yaml#/ApiToken
+    CreateApiTokenRequest:
+      $ref: ./schemas/auth.yaml#/CreateApiTokenRequest
+    CreateApiTokenResponse:
+      $ref: ./schemas/auth.yaml#/CreateApiTokenResponse
+
+    TaskStatus:
+      $ref: ./schemas/tasks.yaml#/TaskStatus
+    ProjectStatus:
+      $ref: ./schemas/tasks.yaml#/ProjectStatus
+    RepeatUnit:
+      $ref: ./schemas/tasks.yaml#/RepeatUnit
+    RepeatRule:
+      $ref: ./schemas/tasks.yaml#/RepeatRule
+    Tag:
+      $ref: ./schemas/tasks.yaml#/Tag
+    CreateTagRequest:
+      $ref: ./schemas/tasks.yaml#/CreateTagRequest
+    UpdateTagRequest:
+      $ref: ./schemas/tasks.yaml#/UpdateTagRequest
+    Task:
+      $ref: ./schemas/tasks.yaml#/Task
+    CreateTaskRequest:
+      $ref: ./schemas/tasks.yaml#/CreateTaskRequest
+    UpdateTaskRequest:
+      $ref: ./schemas/tasks.yaml#/UpdateTaskRequest
+    DeferTaskRequest:
+      $ref: ./schemas/tasks.yaml#/DeferTaskRequest
+    CompleteTaskResponse:
+      $ref: ./schemas/tasks.yaml#/CompleteTaskResponse
+    ParseDateRequest:
+      $ref: ./schemas/tasks.yaml#/ParseDateRequest
+    ParseDateResponse:
+      $ref: ./schemas/tasks.yaml#/ParseDateResponse
+    Project:
+      $ref: ./schemas/tasks.yaml#/Project
+    ProjectDetail:
+      $ref: ./schemas/tasks.yaml#/ProjectDetail
+    CreateProjectRequest:
+      $ref: ./schemas/tasks.yaml#/CreateProjectRequest
+    UpdateProjectRequest:
+      $ref: ./schemas/tasks.yaml#/UpdateProjectRequest
+    ReviewResponse:
+      $ref: ./schemas/tasks.yaml#/ReviewResponse
+    Counts:
+      $ref: ./schemas/tasks.yaml#/Counts
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: Session ID cookie set after Google sign-in

@@ -1,0 +1,426 @@
+# Task, project and tag schemas
+
+TaskStatus:
+  type: string
+  enum: [active, completed, dropped]
+
+ProjectStatus:
+  type: string
+  enum: [active, on_hold, completed, dropped]
+
+RepeatUnit:
+  type: string
+  enum: [day, week, month, year]
+
+RepeatRule:
+  type: object
+  description: How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date.
+  required:
+    - every
+    - unit
+    - from
+  properties:
+    every:
+      type: integer
+      minimum: 1
+      example: 1
+    unit:
+      $ref: "#/RepeatUnit"
+    from:
+      type: string
+      enum: [completion, due]
+      example: completion
+
+Tag:
+  type: object
+  required:
+    - id
+    - name
+    - color
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      example: errands
+    color:
+      type: string
+      description: Hex color used for the tag chip
+      example: "#3b82f6"
+    active_task_count:
+      type: integer
+      description: Number of active tasks carrying this tag
+    created_at:
+      type: string
+      format: date-time
+
+CreateTagRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+    color:
+      type: string
+      example: "#3b82f6"
+
+UpdateTagRequest:
+  type: object
+  properties:
+    name:
+      type: string
+    color:
+      type: string
+
+Task:
+  type: object
+  required:
+    - id
+    - title
+    - note
+    - status
+    - flagged
+    - is_available
+    - tags
+    - sort_order
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    project_id:
+      type: string
+      format: uuid
+      description: Null for inbox tasks
+    project_name:
+      type: string
+    title:
+      type: string
+    note:
+      type: string
+    status:
+      $ref: "#/TaskStatus"
+    flagged:
+      type: boolean
+      description: Urgent tasks are flagged and rendered prominently
+    defer_until:
+      type: string
+      format: date-time
+      description: Task is hidden from "available" views until this time
+    due_at:
+      type: string
+      format: date-time
+    repeat_rule:
+      $ref: "#/RepeatRule"
+    is_available:
+      type: boolean
+      description: Active, not deferred into the future, and its project is active
+    tags:
+      type: array
+      items:
+        $ref: "#/Tag"
+    sort_order:
+      type: integer
+    completed_at:
+      type: string
+      format: date-time
+    dropped_at:
+      type: string
+      format: date-time
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateTaskRequest:
+  type: object
+  required:
+    - title
+  properties:
+    title:
+      type: string
+    note:
+      type: string
+    project_id:
+      type: string
+      format: uuid
+      description: Omit to put the task in the inbox
+    flagged:
+      type: boolean
+    defer_until:
+      type: string
+      format: date-time
+    due_at:
+      type: string
+      format: date-time
+    repeat_rule:
+      $ref: "#/RepeatRule"
+    tag_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+
+UpdateTaskRequest:
+  type: object
+  description: Partial update. Send null for a nullable field to clear it.
+  properties:
+    title:
+      type: string
+    note:
+      type: string
+    project_id:
+      type: [string, "null"]
+      format: uuid
+      description: Null moves the task back to the inbox
+    flagged:
+      type: boolean
+    defer_until:
+      type: [string, "null"]
+      format: date-time
+    due_at:
+      type: [string, "null"]
+      format: date-time
+    repeat_rule:
+      oneOf:
+        - $ref: "#/RepeatRule"
+        - type: "null"
+    tag_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    sort_order:
+      type: integer
+
+DeferTaskRequest:
+  type: object
+  description: Provide exactly one of input (natural language) or until (explicit timestamp), or clear to remove the defer date.
+  properties:
+    input:
+      type: string
+      description: Natural-language deferral such as "1w", "next monday", "in 3 days" or "mid october"
+      example: next monday
+    until:
+      type: string
+      format: date-time
+    clear:
+      type: boolean
+    timezone:
+      type: string
+      description: Overrides the user's stored timezone for this parse
+      example: America/New_York
+
+CompleteTaskResponse:
+  type: object
+  required:
+    - task
+  properties:
+    task:
+      $ref: "#/Task"
+    next_task:
+      description: The next occurrence created for a repeating task
+      allOf:
+        - $ref: "#/Task"
+
+ParseDateRequest:
+  type: object
+  required:
+    - input
+  properties:
+    input:
+      type: string
+      example: next friday
+    kind:
+      type: string
+      enum: [defer, due]
+      description: Picks the default time of day when the phrase has none (defer = start of day, due = 17:00)
+    timezone:
+      type: string
+      example: America/New_York
+    reference:
+      type: string
+      format: date-time
+      description: The reference "now" for relative phrases; defaults to the current time
+
+ParseDateResponse:
+  type: object
+  required:
+    - resolved_at
+    - interpretation
+    - source
+  properties:
+    resolved_at:
+      type: string
+      format: date-time
+    interpretation:
+      type: string
+      description: Human-readable explanation of how the phrase was interpreted
+      example: Monday, October 5 at 12:00 AM
+    source:
+      type: string
+      enum: [rules, ai]
+      description: Whether the deterministic parser or the AI fallback resolved the phrase
+
+Project:
+  type: object
+  required:
+    - id
+    - name
+    - note
+    - status
+    - sequential
+    - review_interval_days
+    - depth
+    - sort_order
+    - remaining_task_count
+    - available_task_count
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    parent_id:
+      type: string
+      format: uuid
+      description: Set for second-level projects; null for top-level projects
+    name:
+      type: string
+    note:
+      type: string
+    status:
+      $ref: "#/ProjectStatus"
+    sequential:
+      type: boolean
+      description: When true, only the first remaining task is available
+    review_interval_days:
+      type: integer
+      example: 7
+    last_reviewed_at:
+      type: string
+      format: date-time
+    next_review_at:
+      type: string
+      format: date-time
+    depth:
+      type: integer
+      description: 0 for top-level, 1 for nested
+    sort_order:
+      type: integer
+    remaining_task_count:
+      type: integer
+    available_task_count:
+      type: integer
+    completed_at:
+      type: string
+      format: date-time
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+ProjectDetail:
+  type: object
+  required:
+    - project
+    - tasks
+    - children
+  properties:
+    project:
+      $ref: "#/Project"
+    tasks:
+      type: array
+      items:
+        $ref: "#/Task"
+    children:
+      type: array
+      items:
+        $ref: "#/Project"
+
+CreateProjectRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+    note:
+      type: string
+    parent_id:
+      type: string
+      format: uuid
+      description: Parent project; must itself be top-level (two levels max)
+    sequential:
+      type: boolean
+    review_interval_days:
+      type: integer
+      minimum: 1
+
+UpdateProjectRequest:
+  type: object
+  properties:
+    name:
+      type: string
+    note:
+      type: string
+    parent_id:
+      type: [string, "null"]
+      format: uuid
+      description: Null moves the project to the top level
+    status:
+      $ref: "#/ProjectStatus"
+    sequential:
+      type: boolean
+    review_interval_days:
+      type: integer
+      minimum: 1
+    sort_order:
+      type: integer
+
+ReviewResponse:
+  type: object
+  required:
+    - due
+    - upcoming
+  properties:
+    due:
+      type: array
+      description: Projects whose next review date has passed, oldest first
+      items:
+        $ref: "#/Project"
+    upcoming:
+      type: array
+      description: Active projects not yet due for review, soonest first
+      items:
+        $ref: "#/Project"
+
+Counts:
+  type: object
+  description: Badge counts for the sidebar
+  required:
+    - inbox
+    - flagged
+    - due_soon
+    - overdue
+    - review_due
+  properties:
+    inbox:
+      type: integer
+    flagged:
+      type: integer
+    due_soon:
+      type: integer
+      description: Available tasks due within the next 24 hours
+    overdue:
+      type: integer
+    review_due:
+      type: integer

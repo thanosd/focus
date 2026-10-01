@@ -1,0 +1,52 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+LICENSE
+
+# CI/CD
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.*
+!.env.sample
+
+# Dependencies
+node_modules
+frontend/node_modules
+
+# Build outputs
+frontend/.next
+frontend/out
+frontend/build
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes / infra (not needed in images)
+k8s
+infra/node_modules
+infra/.pulumi
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.trunk
+.devcontainer

@@ -1,0 +1,2 @@
+# osv-scanner suppressions. Add [[IgnoredVulns]] entries with an id, a
+# reason and an ignoreUntil date when an advisory has no fix yet.

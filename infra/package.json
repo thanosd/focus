@@ -1,0 +1,20 @@
+{
+  "name": "focus-infra",
+  "main": "index.ts",
+  "devDependencies": {
+    "@types/node": "^18",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@pulumi/aws": "^7.0.0",
+    "@pulumi/kubernetes": "^4.24.0",
+    "@pulumi/pulumi": "^3.113.0"
+  },
+  "overrides": {
+    "protobufjs": "^7.5.6",
+    "tmp": "^0.2.6",
+    "shell-quote": "^1.8.4",
+    "sigstore": "^4.1.1",
+    "@sigstore/verify": "^3.1.1"
+  }
+}
