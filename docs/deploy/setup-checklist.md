@@ -38,8 +38,10 @@ In <https://console.cloud.google.com/apis/credentials> (any GCP project):
 ## 4. AWS resources (Pulumi)
 
 ```bash
-cd infra && npm install && pulumi login && pulumi stack init production
-pulumi up
+cd infra && npm install && pulumi login
+pulumi stack init cosmic-teacups-org/focus-infra/production
+pulumi config set aws:region us-east-1 && pulumi config set aws:profile cosmic
+AWS_PROFILE=cosmic pulumi up
 ```
 
 Creates, in account `131925870818` / `us-east-1`:

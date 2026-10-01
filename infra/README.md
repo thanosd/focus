@@ -27,7 +27,10 @@ See `index.ts`:
 cd infra
 npm install
 pulumi login
-pulumi stack init production   # first time
+pulumi stack init cosmic-teacups-org/focus-infra/production   # first time
+pulumi config set aws:region us-east-1
+pulumi config set aws:profile cosmic
+export AWS_PROFILE=cosmic
 pulumi up
 ```
 
