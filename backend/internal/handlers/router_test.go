@@ -151,6 +151,19 @@ func TestRouterEndToEnd(t *testing.T) {
 		t.Fatalf("parse: %d %+v", code, parsed)
 	}
 
+	var parsedRepeat api.ParseRepeatResponse
+	if code := do("POST", "/api/repeats/parse", map[string]any{"input": "every other friday", "timezone": "UTC"}, &parsedRepeat); code != 200 || parsedRepeat.Rule.Every != 2 || parsedRepeat.Rule.Weekdays == nil || len(parsedRepeat.NextOccurrences) != 3 {
+		t.Fatalf("parse repeat: %d %+v", code, parsedRepeat)
+	}
+	var repeated api.Task
+	if code := do("POST", "/api/tasks/"+created.Id.String()+"/repeat", map[string]any{"input": "first of every month"}, &repeated); code != 200 || repeated.RepeatRule == nil || repeated.RepeatDescription == nil || *repeated.RepeatDescription != "monthly on the 1st" || repeated.NextOccurrences == nil {
+		t.Fatalf("set repeat: %d %+v", code, repeated)
+	}
+	var unrepeated api.Task
+	if code := do("POST", "/api/tasks/"+created.Id.String()+"/repeat", map[string]any{"clear": true}, &unrepeated); code != 200 || unrepeated.RepeatRule != nil {
+		t.Fatalf("clear repeat: %d %+v", code, unrepeated)
+	}
+
 	var counts api.Counts
 	if code := do("GET", "/api/counts", nil, &counts); code != 200 || counts.Inbox != 0 || counts.Flagged != 1 {
 		t.Fatalf("counts: %d %+v", code, counts)

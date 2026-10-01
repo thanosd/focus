@@ -11,6 +11,7 @@ import (
 	"github.com/thanosd/focus/backend/internal/domain"
 	"github.com/thanosd/focus/backend/internal/services"
 	"github.com/thanosd/focus/backend/internal/services/dateparse"
+	"github.com/thanosd/focus/backend/internal/services/repeatparse"
 )
 
 // TaskHandler serves /api/tasks, /api/dates/parse and /api/counts.
@@ -316,6 +317,90 @@ func (h *TaskHandler) HandleDefer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, toAPITask(t))
+}
+
+func locationFrom(w http.ResponseWriter, tz *string, fallback *time.Location) (*time.Location, bool) {
+	if tz == nil || *tz == "" {
+		return fallback, true
+	}
+	loc, err := time.LoadLocation(*tz)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Unknown timezone")
+		return nil, false
+	}
+	return loc, true
+}
+
+// HandleSetRepeat sets, replaces or clears a task's repeat rule.
+func (h *TaskHandler) HandleSetRepeat(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(w, r)
+	if user == nil {
+		return
+	}
+	id, ok := pathUUID(w, r, "taskId")
+	if !ok {
+		return
+	}
+	var req api.SetRepeatRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	loc, ok := locationFrom(w, req.Timezone, user.Location())
+	if !ok {
+		return
+	}
+	in := services.RepeatInput{Rule: fromAPIRepeat(req.Rule), Location: loc}
+	if req.Input != nil {
+		in.Input = *req.Input
+	}
+	if req.Clear != nil {
+		in.Clear = *req.Clear
+	}
+	t, _, err := h.tasks.SetRepeat(r.Context(), user, id, in)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toAPITask(t))
+}
+
+// HandleParseRepeat resolves a repeat phrase without changing anything.
+func (h *TaskHandler) HandleParseRepeat(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(w, r)
+	if user == nil {
+		return
+	}
+	var req api.ParseRepeatRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	loc, ok := locationFrom(w, req.Timezone, user.Location())
+	if !ok {
+		return
+	}
+	preq := repeatparse.Request{Input: req.Input, Location: loc}
+	if req.Reference != nil {
+		preq.Now = *req.Reference
+	}
+	res, err := h.tasks.ParseRepeat(r.Context(), preq)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	base := time.Now().In(loc)
+	if res.FirstOccurrence != nil {
+		base = res.FirstOccurrence.Add(-time.Nanosecond)
+	}
+	out := api.ParseRepeatResponse{
+		Rule:            *toAPIRepeat(&res.Rule),
+		Description:     res.Description,
+		FirstOccurrence: res.FirstOccurrence,
+		NextOccurrences: res.Rule.Upcoming(base, upcomingCount),
+		Source:          api.ParseRepeatResponseSource(res.Source),
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // HandleParseDate resolves a natural-language phrase.

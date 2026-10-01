@@ -23,6 +23,7 @@ import (
 	"github.com/thanosd/focus/backend/internal/ports"
 	"github.com/thanosd/focus/backend/internal/services"
 	"github.com/thanosd/focus/backend/internal/services/dateparse"
+	"github.com/thanosd/focus/backend/internal/services/repeatparse"
 )
 
 // Deps are the services the tools call.
@@ -100,6 +101,7 @@ type taskOut struct {
 	DeferUntil  *string  `json:"defer_until,omitempty"`
 	DueAt       *string  `json:"due_at,omitempty"`
 	Repeat      *string  `json:"repeat,omitempty"`
+	NextDates   []string `json:"next_occurrences,omitempty"`
 	IsAvailable bool     `json:"is_available"`
 	CompletedAt *string  `json:"completed_at,omitempty"`
 }
@@ -138,8 +140,19 @@ func toTaskOut(t *domain.Task, loc *time.Location) taskOut {
 		IsAvailable: t.IsAvailable, CompletedAt: fmtTime(t.CompletedAt, loc),
 	}
 	if t.RepeatRule != nil {
-		r := fmt.Sprintf("every %d %s(s) from %s", t.RepeatRule.Every, t.RepeatRule.Unit, t.RepeatRule.From)
+		r := t.RepeatRule.Describe()
 		out.Repeat = &r
+		base := time.Now()
+		if t.RepeatRule.From == domain.RepeatFromDue {
+			if t.DueAt != nil {
+				base = *t.DueAt
+			} else if t.DeferUntil != nil {
+				base = *t.DeferUntil
+			}
+		}
+		for _, u := range t.RepeatRule.Upcoming(base, 3) {
+			out.NextDates = append(out.NextDates, u.In(loc).Format(time.RFC3339))
+		}
 	}
 	return out
 }
@@ -195,7 +208,7 @@ type createTaskIn struct {
 	Flagged   bool     `json:"flagged,omitempty" jsonschema:"Mark as urgent"`
 	Defer     string   `json:"defer,omitempty" jsonschema:"Defer until — natural language (\"1w\", \"next monday\", \"oct 5\") or RFC 3339"`
 	Due       string   `json:"due,omitempty" jsonschema:"Due date — natural language or RFC 3339"`
-	Repeat    string   `json:"repeat,omitempty" jsonschema:"Repeat rule like \"every 1 week\", \"every 2 months from due\"; default is from completion"`
+	Repeat    string   `json:"repeat,omitempty" jsonschema:"Repeat schedule in plain English: \"first of every month\", \"every other friday\", \"weekdays\", \"every 2 weeks after completion\". Calendar-anchored schedules set a due date when the task has none."`
 	Tags      []string `json:"tags,omitempty" jsonschema:"Tag names; missing tags are created"`
 }
 
@@ -208,7 +221,7 @@ type updateTaskIn struct {
 	Flagged   *bool    `json:"flagged,omitempty"`
 	Defer     *string  `json:"defer,omitempty" jsonschema:"New defer date (natural language or RFC 3339); empty string clears"`
 	Due       *string  `json:"due,omitempty" jsonschema:"New due date (natural language or RFC 3339); empty string clears"`
-	Repeat    *string  `json:"repeat,omitempty" jsonschema:"New repeat rule (\"every 1 week\", \"every 3 months from due\"); empty string clears"`
+	Repeat    *string  `json:"repeat,omitempty" jsonschema:"New repeat schedule in plain English (\"first of every month\", \"every monday\", \"every 3 months after completion\"); empty string clears"`
 	Tags      []string `json:"tags,omitempty" jsonschema:"Replace the tag set with these names (empty list clears)"`
 }
 
@@ -336,56 +349,14 @@ func (s *Server) parseWhen(ctx context.Context, user *domain.User, input string,
 	return &res.At, nil
 }
 
-// parseRepeat understands "every N unit[s] [from completion|due]" and
-// shorthands like "weekly", "daily", "monthly", "yearly".
-func parseRepeat(in string) (*domain.RepeatRule, error) {
-	s := strings.ToLower(strings.TrimSpace(in))
-	if s == "" {
+// parseRepeat resolves a repeat phrase through the shared parser so MCP
+// and the UI accept the same vocabulary ("first of every month", "every
+// other friday", "every 2 weeks after completion").
+func (s *Server) parseRepeat(ctx context.Context, user *domain.User, in string) (*repeatparse.Result, error) {
+	if strings.TrimSpace(in) == "" {
 		return nil, nil
 	}
-	rule := &domain.RepeatRule{Every: 1, From: domain.RepeatFromCompletion}
-	if strings.HasSuffix(s, " from due") {
-		rule.From = domain.RepeatFromDue
-		s = strings.TrimSuffix(s, " from due")
-	} else if strings.HasSuffix(s, " from completion") {
-		s = strings.TrimSuffix(s, " from completion")
-	}
-	switch s {
-	case "daily", "every day":
-		rule.Unit = domain.RepeatDay
-		return rule, nil
-	case "weekly", "every week":
-		rule.Unit = domain.RepeatWeek
-		return rule, nil
-	case "monthly", "every month":
-		rule.Unit = domain.RepeatMonth
-		return rule, nil
-	case "yearly", "annually", "every year":
-		rule.Unit = domain.RepeatYear
-		return rule, nil
-	}
-	fields := strings.Fields(strings.TrimPrefix(s, "every "))
-	if len(fields) != 2 {
-		return nil, fmt.Errorf("%w: repeat must look like \"every 2 weeks\" or \"monthly from due\"", domain.ErrValidation)
-	}
-	n := 0
-	if _, err := fmt.Sscanf(fields[0], "%d", &n); err != nil || n < 1 {
-		return nil, fmt.Errorf("%w: repeat count must be a positive number", domain.ErrValidation)
-	}
-	rule.Every = n
-	switch strings.TrimSuffix(fields[1], "s") {
-	case "day":
-		rule.Unit = domain.RepeatDay
-	case "week":
-		rule.Unit = domain.RepeatWeek
-	case "month":
-		rule.Unit = domain.RepeatMonth
-	case "year":
-		rule.Unit = domain.RepeatYear
-	default:
-		return nil, fmt.Errorf("%w: repeat unit must be day, week, month or year", domain.ErrValidation)
-	}
-	return rule, nil
+	return s.deps.Tasks.ParseRepeat(ctx, repeatparse.Request{Input: in, Location: user.Location()})
 }
 
 func (s *Server) listTasks(ctx context.Context, req *mcp.CallToolRequest, in listTasksIn) (*mcp.CallToolResult, any, error) {
@@ -456,9 +427,19 @@ func (s *Server) createTask(ctx context.Context, req *mcp.CallToolRequest, in cr
 	if err != nil {
 		return toolErr(err)
 	}
-	rule, err := parseRepeat(in.Repeat)
+	parsedRepeat, err := s.parseRepeat(ctx, user, in.Repeat)
 	if err != nil {
 		return toolErr(err)
+	}
+	var rule *domain.RepeatRule
+	if parsedRepeat != nil {
+		r := parsedRepeat.Rule
+		rule = &r
+		if dueAt == nil && deferAt == nil && parsedRepeat.FirstOccurrence != nil {
+			f := *parsedRepeat.FirstOccurrence
+			d := time.Date(f.Year(), f.Month(), f.Day(), 17, 0, 0, 0, user.Location())
+			dueAt = &d
+		}
 	}
 	tagIDs, err := s.deps.Tags.EnsureByNames(ctx, user.ID, in.Tags)
 	if err != nil {
@@ -509,8 +490,13 @@ func (s *Server) updateTask(ctx context.Context, req *mcp.CallToolRequest, in up
 	}
 	if in.Repeat != nil {
 		patch.SetRepeat = true
-		if patch.RepeatRule, err = parseRepeat(*in.Repeat); err != nil {
+		parsedRepeat, err := s.parseRepeat(ctx, user, *in.Repeat)
+		if err != nil {
 			return toolErr(err)
+		}
+		if parsedRepeat != nil {
+			r := parsedRepeat.Rule
+			patch.RepeatRule = &r
 		}
 	}
 	if in.Tags != nil {

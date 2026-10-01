@@ -33,16 +33,34 @@ func (e ParseDateRequestKind) Valid() bool {
 
 // Defines values for ParseDateResponseSource.
 const (
-	Ai    ParseDateResponseSource = "ai"
-	Rules ParseDateResponseSource = "rules"
+	ParseDateResponseSourceAi    ParseDateResponseSource = "ai"
+	ParseDateResponseSourceRules ParseDateResponseSource = "rules"
 )
 
 // Valid indicates whether the value is a known member of the ParseDateResponseSource enum.
 func (e ParseDateResponseSource) Valid() bool {
 	switch e {
-	case Ai:
+	case ParseDateResponseSourceAi:
 		return true
-	case Rules:
+	case ParseDateResponseSourceRules:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ParseRepeatResponseSource.
+const (
+	ParseRepeatResponseSourceAi    ParseRepeatResponseSource = "ai"
+	ParseRepeatResponseSourceRules ParseRepeatResponseSource = "rules"
+)
+
+// Valid indicates whether the value is a known member of the ParseRepeatResponseSource enum.
+func (e ParseRepeatResponseSource) Valid() bool {
+	switch e {
+	case ParseRepeatResponseSourceAi:
+		return true
+	case ParseRepeatResponseSourceRules:
 		return true
 	default:
 		return false
@@ -262,7 +280,7 @@ type CreateTaskRequest struct {
 	// ProjectId Omit to put the task in the inbox
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
-	// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date.
+	// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days.
 	RepeatRule *RepeatRule           `json:"repeat_rule,omitempty"`
 	TagIds     *[]openapi_types.UUID `json:"tag_ids,omitempty"`
 	Title      string                `json:"title"`
@@ -324,6 +342,33 @@ type ParseDateResponse struct {
 // ParseDateResponseSource Whether the deterministic parser or the AI fallback resolved the phrase
 type ParseDateResponseSource string
 
+// ParseRepeatRequest defines model for ParseRepeatRequest.
+type ParseRepeatRequest struct {
+	Input string `json:"input"`
+
+	// Reference The reference "today"; defaults to now
+	Reference *time.Time `json:"reference,omitempty"`
+	Timezone  *string    `json:"timezone,omitempty"`
+}
+
+// ParseRepeatResponse defines model for ParseRepeatResponse.
+type ParseRepeatResponse struct {
+	Description string `json:"description"`
+
+	// FirstOccurrence For calendar-anchored rules, the first matching date on or after today
+	FirstOccurrence *time.Time `json:"first_occurrence,omitempty"`
+
+	// NextOccurrences The next few occurrences, starting from first_occurrence (or today)
+	NextOccurrences []time.Time `json:"next_occurrences"`
+
+	// Rule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days.
+	Rule   RepeatRule                `json:"rule"`
+	Source ParseRepeatResponseSource `json:"source"`
+}
+
+// ParseRepeatResponseSource defines model for ParseRepeatResponse.Source.
+type ParseRepeatResponseSource string
+
 // Project defines model for Project.
 type Project struct {
 	AvailableTaskCount int        `json:"available_task_count"`
@@ -370,11 +415,16 @@ type ReorderTasksRequest struct {
 	TaskIds []openapi_types.UUID `json:"task_ids"`
 }
 
-// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date.
+// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days.
 type RepeatRule struct {
-	Every int            `json:"every"`
-	From  RepeatRuleFrom `json:"from"`
-	Unit  RepeatUnit     `json:"unit"`
+	// DayOfMonth Only with unit=month — day of the month (1–31) or -1 for the last day; days past a month's end clamp to its last day
+	DayOfMonth *int           `json:"day_of_month,omitempty"`
+	Every      int            `json:"every"`
+	From       RepeatRuleFrom `json:"from"`
+	Unit       RepeatUnit     `json:"unit"`
+
+	// Weekdays Only with unit=week — which weekdays (0 = Sunday … 6 = Saturday)
+	Weekdays *[]int `json:"weekdays,omitempty"`
 }
 
 // RepeatRuleFrom defines model for RepeatRule.From.
@@ -390,6 +440,16 @@ type ReviewResponse struct {
 
 	// Upcoming Active projects not yet due for review, soonest first
 	Upcoming []Project `json:"upcoming"`
+}
+
+// SetRepeatRequest Provide exactly one of input (natural language), rule (explicit), or clear.
+type SetRepeatRequest struct {
+	Clear *bool   `json:"clear,omitempty"`
+	Input *string `json:"input,omitempty"`
+
+	// Rule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days.
+	Rule     *RepeatRule `json:"rule,omitempty"`
+	Timezone *string     `json:"timezone,omitempty"`
 }
 
 // Tag defines model for Tag.
@@ -419,14 +479,20 @@ type Task struct {
 	Id      openapi_types.UUID `json:"id"`
 
 	// IsAvailable Active, not deferred into the future, and its project is active
-	IsAvailable bool   `json:"is_available"`
-	Note        string `json:"note"`
+	IsAvailable bool `json:"is_available"`
+
+	// NextOccurrences For repeating tasks, when the next occurrences would land if this one were completed now (first entry = the next one)
+	NextOccurrences *[]time.Time `json:"next_occurrences,omitempty"`
+	Note            string       `json:"note"`
 
 	// ProjectId Null for inbox tasks
 	ProjectId   *openapi_types.UUID `json:"project_id,omitempty"`
 	ProjectName *string             `json:"project_name,omitempty"`
 
-	// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date.
+	// RepeatDescription Plain-English reading of repeat_rule
+	RepeatDescription *string `json:"repeat_description,omitempty"`
+
+	// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days.
 	RepeatRule *RepeatRule `json:"repeat_rule,omitempty"`
 	SortOrder  int         `json:"sort_order"`
 	Status     TaskStatus  `json:"status"`
@@ -467,7 +533,7 @@ type UpdateTaskRequest struct {
 	// ProjectId Null moves the task back to the inbox
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
-	// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date.
+	// RepeatRule How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days.
 	RepeatRule *RepeatRule           `json:"repeat_rule,omitempty"`
 	SortOrder  *int                  `json:"sort_order,omitempty"`
 	TagIds     *[]openapi_types.UUID `json:"tag_ids,omitempty"`
@@ -549,6 +615,9 @@ type ReorderProjectsJSONRequestBody = ReorderProjectsRequest
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = UpdateProjectRequest
 
+// ParseRepeatJSONRequestBody defines body for ParseRepeat for application/json ContentType.
+type ParseRepeatJSONRequestBody = ParseRepeatRequest
+
 // CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
 type CreateTagJSONRequestBody = CreateTagRequest
 
@@ -566,6 +635,9 @@ type UpdateTaskJSONRequestBody = UpdateTaskRequest
 
 // DeferTaskJSONRequestBody defines body for DeferTask for application/json ContentType.
 type DeferTaskJSONRequestBody = DeferTaskRequest
+
+// SetTaskRepeatJSONRequestBody defines body for SetTaskRepeat for application/json ContentType.
+type SetTaskRepeatJSONRequestBody = SetRepeatRequest
 
 // UpdateUserPreferencesJSONRequestBody defines body for UpdateUserPreferences for application/json ContentType.
 type UpdateUserPreferencesJSONRequestBody = UpdateUserPreferencesRequest

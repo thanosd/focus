@@ -52,24 +52,34 @@ list views, badges and project counts can't disagree.
 
 ## Repeats
 
-`repeat_rule = {"every": N, "unit": day|week|month|year, "from": completion|due}`.
+`repeat_rule = {"every": N, "unit": day|week|month|year, "from": completion|due,
+"weekdays"?: [0-6], "day_of_month"?: 1-31 | -1}`.
+
+Two optional anchors pin occurrences to the calendar: `weekdays` (weekly
+rules, e.g. Mon/Wed/Fri) and `day_of_month` (monthly rules; `-1` = last
+day, and days past a month's end clamp to its last day). `RepeatRule.Next`
+computes the next occurrence honouring both; `Upcoming` previews several.
+
+Rules can be set in plain English (`POST /api/tasks/{id}/repeat {input}` or
+`POST /api/repeats/parse`): "first of every month", "every other friday",
+"weekdays", "every 2 weeks after completion", "yearly on jan 1". The
+rule-based parser (`services/repeatparse`) covers that vocabulary; Claude is
+the fallback for anything else. Calendar-anchored phrases default to
+`from: due`; bare intervals default to `from: completion`. Setting an
+anchored rule on an undated task pins `due_at` to the first occurrence.
+
+Every task response carries `repeat_description` and `next_occurrences`
+(the next three dates if it were completed now) so the UI can show what's
+coming back before you tick it off.
 
 On completion the task is marked `completed` and a new active task is
 created with the same title, note, project, flag and tags:
 
-- `from: completion` — `defer_until = completion + interval` (keeping the
-  original time of day); a due date keeps its gap from the defer date.
-- `from: due` — `due_at` advances by the interval from its previous value
-  (catching up past the completion time if it's overdue); the defer date
-  keeps its gap. A weekly "Friday" task stays on Fridays however late you
-  finish it.
-
-## Project levels
-
-Projects nest up to three levels: a top-level **bucket** ("Personal",
-"Work"), a project, and a sub-project. Any level may hold tasks; buckets
-usually don't. The service enforces the limit on create and re-parent,
-including the depth of the subtree being moved.
+- `from: completion` — the next date is `Next(completion time)`; a defer
+  date keeps its time of day, and a due date keeps its gap from the defer.
+- `from: due` — `due_at` advances from its previous value (catching up past
+  the completion time if it's overdue); the defer date keeps its gap. A
+  monthly "1st" task stays on the 1st however late you finish it.
 
 ## Reviews
 

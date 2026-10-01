@@ -57,8 +57,12 @@ paths:
     $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1defer
   /api/tasks/reorder:
     $ref: ./paths/tasks.yaml#/~1api~1tasks~1reorder
+  /api/tasks/{taskId}/repeat:
+    $ref: ./paths/tasks.yaml#/~1api~1tasks~1{taskId}~1repeat
   /api/dates/parse:
     $ref: ./paths/tasks.yaml#/~1api~1dates~1parse
+  /api/repeats/parse:
+    $ref: ./paths/tasks.yaml#/~1api~1repeats~1parse
   /api/counts:
     $ref: ./paths/tasks.yaml#/~1api~1counts
 
@@ -126,6 +130,12 @@ components:
       $ref: ./schemas/tasks.yaml#/DeferTaskRequest
     ReorderTasksRequest:
       $ref: ./schemas/tasks.yaml#/ReorderTasksRequest
+    ParseRepeatRequest:
+      $ref: ./schemas/tasks.yaml#/ParseRepeatRequest
+    ParseRepeatResponse:
+      $ref: ./schemas/tasks.yaml#/ParseRepeatResponse
+    SetRepeatRequest:
+      $ref: ./schemas/tasks.yaml#/SetRepeatRequest
     ReorderProjectsRequest:
       $ref: ./schemas/tasks.yaml#/ReorderProjectsRequest
     CompleteTaskResponse:

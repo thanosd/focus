@@ -271,6 +271,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{taskId}/repeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a task's repeat schedule
+         * @description Sets repeat_rule from a natural-language phrase ("first of every month", "every other friday", "every 2 weeks after completion"), an explicit rule, or clears it. Calendar-anchored rules on an undated task also set due_at to the first occurrence.
+         */
+        post: operations["setTaskRepeat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dates/parse": {
         parameters: {
             query?: never;
@@ -285,6 +305,26 @@ export interface paths {
          * @description Resolves a phrase to a timestamp using the rule-based parser, falling back to Claude for anything it cannot handle.
          */
         post: operations["parseDate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repeats/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parse a natural-language repeat schedule
+         * @description Resolves a phrase to a repeat rule using the rule-based parser, falling back to Claude, without changing anything.
+         */
+        post: operations["parseRepeat"];
         delete?: never;
         options?: never;
         head?: never;
@@ -520,7 +560,7 @@ export interface components {
         ProjectStatus: "active" | "on_hold" | "completed" | "dropped";
         /** @enum {string} */
         RepeatUnit: "day" | "week" | "month" | "year";
-        /** @description How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. */
+        /** @description How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days. */
         RepeatRule: {
             /** @example 1 */
             every: number;
@@ -530,6 +570,10 @@ export interface components {
              * @enum {string}
              */
             from: "completion" | "due";
+            /** @description Only with unit=week — which weekdays (0 = Sunday … 6 = Saturday) */
+            weekdays?: number[];
+            /** @description Only with unit=month — day of the month (1–31) or -1 for the last day; days past a month's end clamp to its last day */
+            day_of_month?: number;
         };
         Tag: {
             /** Format: uuid */
@@ -577,6 +621,13 @@ export interface components {
             /** Format: date-time */
             due_at?: string;
             repeat_rule?: components["schemas"]["RepeatRule"];
+            /**
+             * @description Plain-English reading of repeat_rule
+             * @example monthly on the 1st
+             */
+            repeat_description?: string;
+            /** @description For repeating tasks, when the next occurrences would land if this one were completed now (first entry = the next one) */
+            next_occurrences?: string[];
             /** @description Active, not deferred into the future, and its project is active */
             is_available: boolean;
             tags: components["schemas"]["Tag"][];
@@ -643,6 +694,39 @@ export interface components {
         /** @description Full ordering of the project's (or inbox's) active tasks. Tasks not listed keep their relative order after the listed ones. */
         ReorderTasksRequest: {
             task_ids: string[];
+        };
+        ParseRepeatRequest: {
+            /** @example first of every month */
+            input: string;
+            /** @example America/Los_Angeles */
+            timezone?: string;
+            /**
+             * Format: date-time
+             * @description The reference "today"; defaults to now
+             */
+            reference?: string;
+        };
+        ParseRepeatResponse: {
+            rule: components["schemas"]["RepeatRule"];
+            /** @example monthly on the 1st */
+            description: string;
+            /**
+             * Format: date-time
+             * @description For calendar-anchored rules, the first matching date on or after today
+             */
+            first_occurrence?: string;
+            /** @description The next few occurrences, starting from first_occurrence (or today) */
+            next_occurrences: string[];
+            /** @enum {string} */
+            source: "rules" | "ai";
+        };
+        /** @description Provide exactly one of input (natural language), rule (explicit), or clear. */
+        SetRepeatRequest: {
+            /** @example every other friday */
+            input?: string;
+            rule?: components["schemas"]["RepeatRule"];
+            clear?: boolean;
+            timezone?: string;
         };
         /** @description Ordering of sibling projects (same parent). sort_order is set to each ID's position. */
         ReorderProjectsRequest: {
@@ -1491,6 +1575,60 @@ export interface operations {
             };
         };
     };
+    setTaskRepeat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Task ID */
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRepeatRequest"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     parseDate: {
         parameters: {
             query?: never;
@@ -1511,6 +1649,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ParseDateResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    parseRepeat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParseRepeatRequest"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParseRepeatResponse"];
                 };
             };
             /** @description Bad request */

@@ -39,8 +39,8 @@ services as the web UI.
 | `get_counts`                                | Badge counts                                                                                                             |
 
 Dates in `create_task` / `update_task` / `defer_task` accept natural
-language or RFC 3339. Repeat rules accept "every 2 weeks", "monthly from
-due", "daily". All timestamps are returned in the user's timezone.
+language or RFC 3339. Repeat schedules accept plain English: "first of every
+month", "every other friday", "weekdays", "every 2 weeks after completion". All timestamps are returned in the user's timezone.
 
 ## Auth model
 

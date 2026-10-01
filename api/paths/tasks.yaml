@@ -459,3 +459,87 @@
               $ref: ../schemas/common.yaml#/Error
     security:
       - cookieAuth: []
+
+/api/tasks/{taskId}/repeat:
+  post:
+    tags:
+      - tasks
+    summary: Set a task's repeat schedule
+    description: Sets repeat_rule from a natural-language phrase ("first of every month", "every other friday", "every 2 weeks after completion"), an explicit rule, or clears it. Calendar-anchored rules on an undated task also set due_at to the first occurrence.
+    operationId: setTaskRepeat
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: Task ID
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/SetRepeatRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/Task
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "404":
+        description: Not found
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []
+
+/api/repeats/parse:
+  post:
+    tags:
+      - tasks
+    summary: Parse a natural-language repeat schedule
+    description: Resolves a phrase to a repeat rule using the rule-based parser, falling back to Claude, without changing anything.
+    operationId: parseRepeat
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../schemas/tasks.yaml#/ParseRepeatRequest
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/tasks.yaml#/ParseRepeatResponse
+      "400":
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/common.yaml#/Error
+    security:
+      - cookieAuth: []

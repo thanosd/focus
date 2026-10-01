@@ -28,6 +28,7 @@ import (
 	"github.com/thanosd/focus/backend/internal/mcpserver"
 	"github.com/thanosd/focus/backend/internal/services"
 	"github.com/thanosd/focus/backend/internal/services/dateparse"
+	"github.com/thanosd/focus/backend/internal/services/repeatparse"
 	"github.com/thanosd/focus/backend/internal/temporal/worker"
 )
 
@@ -148,8 +149,13 @@ func runServer(cfg *config.Config) {
 		log.Fatalf("Failed to initialise Claude: %v", err)
 	}
 	parser := dateparse.NewParser(ai)
+	var repeatAI repeatparse.AIResolver
+	if resolver, err := repeatparse.NewClaudeResolver(cfg.ClaudeAPIKey, cfg.ClaudeModel); err == nil {
+		repeatAI = resolver
+	}
+	repeatParser := repeatparse.NewParser(repeatAI)
 
-	taskService := services.NewTaskService(taskRepo, projectRepo, parser)
+	taskService := services.NewTaskService(taskRepo, projectRepo, parser, repeatParser)
 	projectService := services.NewProjectService(projectRepo, taskRepo)
 	tagService := services.NewTagService(tagRepo)
 

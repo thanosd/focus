@@ -62,7 +62,9 @@ func NewRouter(d Deps) http.Handler {
 	mux.Handle("POST /api/tasks/{taskId}/drop", private(d.Tasks.HandleDrop))
 	mux.Handle("POST /api/tasks/{taskId}/reopen", private(d.Tasks.HandleReopen))
 	mux.Handle("POST /api/tasks/{taskId}/defer", private(d.Tasks.HandleDefer))
+	mux.Handle("POST /api/tasks/{taskId}/repeat", private(d.Tasks.HandleSetRepeat))
 	mux.Handle("POST /api/dates/parse", private(d.Tasks.HandleParseDate))
+	mux.Handle("POST /api/repeats/parse", private(d.Tasks.HandleParseRepeat))
 	mux.Handle("GET /api/counts", private(d.Tasks.HandleCounts))
 
 	// Projects + reviews

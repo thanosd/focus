@@ -10,6 +10,7 @@ import (
 	"github.com/thanosd/focus/backend/internal/domain"
 	"github.com/thanosd/focus/backend/internal/ports"
 	"github.com/thanosd/focus/backend/internal/services/dateparse"
+	"github.com/thanosd/focus/backend/internal/services/repeatparse"
 )
 
 // TaskService owns tasks: inbox capture, editing, completion with
@@ -18,11 +19,17 @@ type TaskService struct {
 	tasks    ports.TaskRepository
 	projects ports.ProjectRepository
 	parser   *dateparse.Parser
+	repeats  *repeatparse.Parser
 }
 
-// NewTaskService constructs a TaskService.
-func NewTaskService(tasks ports.TaskRepository, projects ports.ProjectRepository, parser *dateparse.Parser) *TaskService {
-	return &TaskService{tasks: tasks, projects: projects, parser: parser}
+// NewTaskService constructs a TaskService. repeats may be nil (rule-based
+// repeat parsing only).
+func NewTaskService(tasks ports.TaskRepository, projects ports.ProjectRepository, parser *dateparse.Parser, repeats ...*repeatparse.Parser) *TaskService {
+	s := &TaskService{tasks: tasks, projects: projects, parser: parser, repeats: repeatparse.NewParser(nil)}
+	if len(repeats) > 0 && repeats[0] != nil {
+		s.repeats = repeats[0]
+	}
+	return s
 }
 
 // Get loads one task.
@@ -211,10 +218,13 @@ func (s *TaskService) Complete(ctx context.Context, userID, id string) (*domain.
 
 // spawnNext creates the next occurrence of a repeating task.
 //
-// from=completion: the defer date moves to completion + interval; if the
-// task also had a due date the gap between defer and due is preserved.
-// from=due: both dates advance by one interval from their previous values
-// (so a weekly Friday task stays on Fridays no matter when it's done).
+// from=completion: the next occurrence is scheduled from the completion
+// time (RepeatRule.Next honours weekday / day-of-month anchors); the
+// defer date keeps its original time of day and a due date keeps its gap
+// from the defer date.
+// from=due: dates advance from their previous values, catching up past
+// the completion time, so a monthly "1st" task stays on the 1st however
+// late it was finished.
 func (s *TaskService) spawnNext(ctx context.Context, done *domain.Task, completedAt time.Time) (*domain.Task, error) {
 	rule := *done.RepeatRule
 	next := &domain.Task{
@@ -225,52 +235,54 @@ func (s *TaskService) spawnNext(ctx context.Context, done *domain.Task, complete
 		Flagged:    done.Flagged,
 		RepeatRule: done.RepeatRule,
 	}
+	advance := func(from time.Time) time.Time {
+		d := rule.Next(from)
+		for !d.After(completedAt) {
+			d = rule.Next(d)
+		}
+		return d
+	}
 	switch rule.From {
 	case domain.RepeatFromDue:
-		if done.DueAt != nil {
-			d := rule.Add(*done.DueAt)
-			// Catch up past-due repeats so the next one lands in the future.
-			for !d.After(completedAt) {
-				d = rule.Add(d)
-			}
+		switch {
+		case done.DueAt != nil:
+			d := advance(*done.DueAt)
 			next.DueAt = &d
 			if done.DeferUntil != nil {
-				gap := done.DueAt.Sub(*done.DeferUntil)
-				df := d.Add(-gap)
+				df := d.Add(-done.DueAt.Sub(*done.DeferUntil))
 				next.DeferUntil = &df
 			}
-		} else if done.DeferUntil != nil {
-			d := rule.Add(*done.DeferUntil)
-			for !d.After(completedAt) {
-				d = rule.Add(d)
-			}
+		case done.DeferUntil != nil:
+			d := advance(*done.DeferUntil)
 			next.DeferUntil = &d
-		} else {
-			d := rule.Add(completedAt)
+		default:
+			d := advance(completedAt)
 			next.DeferUntil = &d
 		}
 	default: // completion
-		base := rule.Add(completedAt)
+		base := completedAt
 		if done.DeferUntil != nil {
-			// Keep the original time of day for the defer date.
-			y, m, d := base.Date()
+			// Keep the task's own time of day on the defer date.
 			loc := done.DeferUntil.Location()
-			base = time.Date(y, m, d, done.DeferUntil.In(loc).Hour(), done.DeferUntil.In(loc).Minute(), 0, 0, loc)
+			ca := completedAt.In(loc)
+			base = time.Date(ca.Year(), ca.Month(), ca.Day(), done.DeferUntil.In(loc).Hour(), done.DeferUntil.In(loc).Minute(), 0, 0, loc)
+		} else if done.DueAt != nil {
+			loc := done.DueAt.Location()
+			ca := completedAt.In(loc)
+			base = time.Date(ca.Year(), ca.Month(), ca.Day(), done.DueAt.In(loc).Hour(), done.DueAt.In(loc).Minute(), 0, 0, loc)
 		}
-		next.DeferUntil = &base
-		if done.DueAt != nil {
-			gap := time.Duration(0)
-			if done.DeferUntil != nil {
-				gap = done.DueAt.Sub(*done.DeferUntil)
+		d := rule.Next(base)
+		switch {
+		case done.DeferUntil != nil:
+			next.DeferUntil = &d
+			if done.DueAt != nil {
+				due := d.Add(done.DueAt.Sub(*done.DeferUntil))
+				next.DueAt = &due
 			}
-			due := base.Add(gap)
-			if done.DeferUntil == nil {
-				due = rule.Add(*done.DueAt)
-				for !due.After(completedAt) {
-					due = rule.Add(due)
-				}
-			}
-			next.DueAt = &due
+		case done.DueAt != nil:
+			next.DueAt = &d
+		default:
+			next.DeferUntil = &d
 		}
 	}
 	if err := s.tasks.Create(ctx, next); err != nil {
@@ -286,6 +298,70 @@ func (s *TaskService) spawnNext(ctx context.Context, done *domain.Task, complete
 		}
 	}
 	return s.Get(ctx, done.UserID, next.ID)
+}
+
+// RepeatInput is one set-repeat request: exactly one of Input / Rule / Clear.
+type RepeatInput struct {
+	Input    string
+	Rule     *domain.RepeatRule
+	Clear    bool
+	Location *time.Location
+}
+
+// SetRepeat sets a task's repeat rule from a phrase or an explicit rule.
+// Anchored rules on a task with no dates pin a due date to the first
+// occurrence so the schedule has something to repeat from.
+func (s *TaskService) SetRepeat(ctx context.Context, user *domain.User, id string, in RepeatInput) (*domain.Task, *repeatparse.Result, error) {
+	t, err := s.Get(ctx, user.ID, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	loc := in.Location
+	if loc == nil {
+		loc = user.Location()
+	}
+	var parsed *repeatparse.Result
+	switch {
+	case in.Clear:
+		t.RepeatRule = nil
+	case in.Rule != nil:
+		if err := in.Rule.Validate(); err != nil {
+			return nil, nil, fmt.Errorf("%w: %v", domain.ErrValidation, err)
+		}
+		t.RepeatRule = in.Rule
+		parsed = &repeatparse.Result{Rule: *in.Rule, Description: in.Rule.Describe(), Source: "rules"}
+	case strings.TrimSpace(in.Input) != "":
+		parsed, err = s.ParseRepeat(ctx, repeatparse.Request{Input: in.Input, Location: loc})
+		if err != nil {
+			return nil, nil, err
+		}
+		rule := parsed.Rule
+		t.RepeatRule = &rule
+	default:
+		return nil, nil, fmt.Errorf("%w: provide input, rule or clear", domain.ErrValidation)
+	}
+	if t.RepeatRule != nil && t.DueAt == nil && t.DeferUntil == nil && parsed != nil && parsed.FirstOccurrence != nil {
+		f := *parsed.FirstOccurrence
+		due := time.Date(f.Year(), f.Month(), f.Day(), 17, 0, 0, 0, loc)
+		t.DueAt = &due
+	}
+	if err := s.tasks.Update(ctx, t); err != nil {
+		return nil, nil, err
+	}
+	t, err = s.Get(ctx, user.ID, id)
+	return t, parsed, err
+}
+
+// ParseRepeat resolves a repeat phrase, mapping failures to validation errors.
+func (s *TaskService) ParseRepeat(ctx context.Context, req repeatparse.Request) (*repeatparse.Result, error) {
+	res, err := s.repeats.Parse(ctx, req)
+	if err != nil {
+		if errors.Is(err, repeatparse.ErrNotUnderstood) {
+			return nil, fmt.Errorf("%w: couldn't understand %q as a repeat schedule", domain.ErrValidation, strings.TrimSpace(req.Input))
+		}
+		return nil, err
+	}
+	return res, nil
 }
 
 // Reorder applies a drag-and-drop ordering. Every ID must be a task of

@@ -14,7 +14,7 @@ RepeatUnit:
 
 RepeatRule:
   type: object
-  description: How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date.
+  description: How a task repeats. "from" controls whether the next occurrence is scheduled relative to the completion date or the previous due/defer date. Optional anchors pin occurrences to calendar days.
   required:
     - every
     - unit
@@ -30,6 +30,75 @@ RepeatRule:
       type: string
       enum: [completion, due]
       example: completion
+    weekdays:
+      type: array
+      description: Only with unit=week — which weekdays (0 = Sunday … 6 = Saturday)
+      items:
+        type: integer
+        minimum: 0
+        maximum: 6
+    day_of_month:
+      type: integer
+      description: Only with unit=month — day of the month (1–31) or -1 for the last day; days past a month's end clamp to its last day
+      minimum: -1
+      maximum: 31
+
+ParseRepeatRequest:
+  type: object
+  required:
+    - input
+  properties:
+    input:
+      type: string
+      example: first of every month
+    timezone:
+      type: string
+      example: America/Los_Angeles
+    reference:
+      type: string
+      format: date-time
+      description: The reference "today"; defaults to now
+
+ParseRepeatResponse:
+  type: object
+  required:
+    - rule
+    - description
+    - next_occurrences
+    - source
+  properties:
+    rule:
+      $ref: "#/RepeatRule"
+    description:
+      type: string
+      example: monthly on the 1st
+    first_occurrence:
+      type: string
+      format: date-time
+      description: For calendar-anchored rules, the first matching date on or after today
+    next_occurrences:
+      type: array
+      description: The next few occurrences, starting from first_occurrence (or today)
+      items:
+        type: string
+        format: date-time
+    source:
+      type: string
+      enum: [rules, ai]
+
+SetRepeatRequest:
+  type: object
+  description: Provide exactly one of input (natural language), rule (explicit), or clear.
+  properties:
+    input:
+      type: string
+      example: every other friday
+    rule:
+      $ref: "#/RepeatRule"
+    clear:
+      type: boolean
+    timezone:
+      type: string
 
 Tag:
   type: object
@@ -116,6 +185,16 @@ Task:
       format: date-time
     repeat_rule:
       $ref: "#/RepeatRule"
+    repeat_description:
+      type: string
+      description: Plain-English reading of repeat_rule
+      example: monthly on the 1st
+    next_occurrences:
+      type: array
+      description: For repeating tasks, when the next occurrences would land if this one were completed now (first entry = the next one)
+      items:
+        type: string
+        format: date-time
     is_available:
       type: boolean
       description: Active, not deferred into the future, and its project is active
