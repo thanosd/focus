@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 import TaskList from "@/components/TaskList";
 import TaskInspector from "@/components/TaskInspector";
 import QuickAdd from "@/components/QuickAdd";
+import DockedPane from "@/components/DockedPane";
 
 interface TaskWorkspaceProps {
   title: string;
@@ -23,8 +24,8 @@ interface TaskWorkspaceProps {
 }
 
 /**
- * A task list page body: heading, quick-add, list and inspector wired
- * together. Used by inbox, flagged, tag and project views.
+ * A task list page: heading, quick-add and list in the main column, with
+ * the inspector docked on the right. Used by inbox, flagged and tag views.
  */
 export default function TaskWorkspace({
   title,
@@ -69,53 +70,67 @@ export default function TaskWorkspace({
     [remove],
   );
 
+  const close = useCallback(() => setSelected(null), []);
+
   return (
-    <div className="p-6 md:p-8 max-w-4xl">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          {subtitle && (
-            <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
-          )}
+    <div className="flex flex-1 items-start">
+      <div className="flex-1 min-w-0 p-6 md:p-8">
+        <div className="max-w-4xl">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              {subtitle && (
+                <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+              )}
+            </div>
+            {headerExtra}
+          </div>
+          <div className="mb-4">
+            <QuickAdd
+              projectId={quickAdd?.projectId}
+              tagIds={quickAdd?.tagIds}
+              flagged={quickAdd?.flagged}
+              onCreated={(t) => {
+                prepend(t);
+                setSelected(t);
+              }}
+            />
+          </div>
+          <TaskList
+            tasks={tasks}
+            loading={loading}
+            error={error}
+            emptyMessage={emptyMessage}
+            projects={projects}
+            showProjectPicker={showProjectPicker}
+            hideProject={hideProject}
+            selectedId={selected?.id ?? null}
+            onSelect={setSelected}
+            onUpdated={handleUpdated}
+            onCompleted={handleCompleted}
+            onDeleted={handleDeleted}
+          />
         </div>
-        {headerExtra}
       </div>
-      <div className="mb-4">
-        <QuickAdd
-          projectId={quickAdd?.projectId}
-          tagIds={quickAdd?.tagIds}
-          flagged={quickAdd?.flagged}
-          onCreated={(t) => {
-            prepend(t);
-            setSelected(t);
-          }}
-        />
-      </div>
-      <TaskList
-        tasks={tasks}
-        loading={loading}
-        error={error}
-        emptyMessage={emptyMessage}
-        projects={projects}
-        showProjectPicker={showProjectPicker}
-        hideProject={hideProject}
-        selectedId={selected?.id ?? null}
-        onSelect={setSelected}
-        onUpdated={handleUpdated}
-        onCompleted={handleCompleted}
-      />
-      {selected && (
-        <TaskInspector
-          task={selected}
-          projects={projects}
-          tags={tags}
-          onCreateTag={addTag}
-          onUpdated={handleUpdated}
-          onCompleted={handleCompleted}
-          onDeleted={handleDeleted}
-          onClose={() => setSelected(null)}
-        />
-      )}
+      <DockedPane
+        open={!!selected}
+        onClose={close}
+        label="Task details"
+        placeholder="Select a task to see its details."
+      >
+        {selected && (
+          <TaskInspector
+            task={selected}
+            projects={projects}
+            tags={tags}
+            onCreateTag={addTag}
+            onUpdated={handleUpdated}
+            onCompleted={handleCompleted}
+            onDeleted={handleDeleted}
+            onClose={close}
+          />
+        )}
+      </DockedPane>
     </div>
   );
 }

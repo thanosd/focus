@@ -2,6 +2,18 @@
 
 import type { Project } from "@/lib/types";
 import { projectOptions } from "@/hooks/useProjectsAndTags";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Inbox } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const INBOX = "__inbox__";
 
 interface ProjectPickerProps {
   projects: Project[];
@@ -13,7 +25,7 @@ interface ProjectPickerProps {
   compact?: boolean;
 }
 
-/** <select> of projects with nested projects indented under their parent. */
+/** Project dropdown with nested projects indented under their parent. */
 export default function ProjectPicker({
   projects,
   value,
@@ -28,25 +40,37 @@ export default function ProjectPicker({
     ),
   );
   return (
-    <select
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value || null)}
+    <Select
+      value={value ?? INBOX}
+      onValueChange={(v) => onChange(v === INBOX ? null : v)}
       disabled={disabled}
-      onClick={(e) => e.stopPropagation()}
-      className={`border border-gray-300 rounded-md bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-        compact ? "text-xs px-1.5 py-0.5" : "text-sm px-2.5 py-1.5"
-      } ${className}`}
     >
-      <option value="">Inbox (no project)</option>
-      {options.map(({ project, depth }) => (
-        <option key={project.id} value={project.id}>
-          {depth > 0 ? "    ↳ " : ""}
-          {project.name}
-          {project.status !== "active"
-            ? ` (${project.status.replace("_", " ")})`
-            : ""}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        size={compact ? "xs" : "sm"}
+        className={cn(compact ? "w-44" : "w-full", className)}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Project"
+      >
+        <SelectValue placeholder="Project" />
+      </SelectTrigger>
+      <SelectContent onClick={(e) => e.stopPropagation()}>
+        <SelectItem value={INBOX}>
+          <span className="inline-flex items-center gap-1.5 text-gray-600">
+            <Inbox className="h-3.5 w-3.5" /> Inbox (no project)
+          </span>
+        </SelectItem>
+        {options.length > 0 && <SelectSeparator />}
+        {options.map(({ project, depth }) => (
+          <SelectItem key={project.id} value={project.id} depth={depth}>
+            {project.name}
+            {project.status !== "active" && (
+              <span className="ml-1.5 text-xs text-gray-400">
+                ({project.status.replace("_", " ")})
+              </span>
+            )}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

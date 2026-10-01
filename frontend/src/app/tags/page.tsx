@@ -3,10 +3,13 @@
 import RequireAuth from "@/components/RequireAuth";
 import { apiClient, errorMessage } from "@/lib/api-client";
 import type { Tag } from "@/lib/types";
+import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import TagChip from "@/components/TagChip";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const PALETTE = [
   "#3b82f6",
@@ -21,6 +24,7 @@ const PALETTE = [
 
 function TagsContent() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -71,10 +75,13 @@ function TagsContent() {
   };
 
   const del = async (tag: Tag) => {
-    if (
-      !window.confirm(`Delete tag "${tag.name}"? Tasks keep their other tags.`)
-    )
-      return;
+    const ok = await confirm({
+      title: `Delete tag "${tag.name}"?`,
+      description: "Tasks keep their other tags.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await apiClient.DELETE("/api/tags/{tagId}", {
       params: { path: { tagId: tag.id } },
     });
@@ -111,12 +118,9 @@ function TagsContent() {
           className="flex-1 outline-none text-sm bg-transparent"
         />
         {name.trim() && (
-          <button
-            type="submit"
-            className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md px-2.5 py-1"
-          >
+          <Button type="submit" variant="primary" size="xs">
             Add
-          </button>
+          </Button>
         )}
       </form>
 
@@ -139,8 +143,7 @@ function TagsContent() {
                     className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
                     aria-label="Tag color"
                   />
-                  <input
-                    type="text"
+                  <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => {
@@ -148,20 +151,18 @@ function TagsContent() {
                       if (e.key === "Escape") setEditing(null);
                     }}
                     autoFocus
-                    className="flex-1 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1"
                   />
-                  <button
-                    onClick={save}
-                    className="text-xs font-medium px-2.5 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700"
-                  >
+                  <Button size="xs" variant="primary" onClick={save}>
                     Save
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
                     onClick={() => setEditing(null)}
-                    className="text-xs px-2.5 py-1 rounded-md text-gray-600 hover:bg-gray-100"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
@@ -174,22 +175,24 @@ function TagsContent() {
                       {tag.active_task_count ?? 0} active
                     </span>
                   </Link>
-                  <button
+                  <Button
+                    size="xs"
+                    variant="ghost"
                     onClick={() => {
                       setEditing(tag);
                       setEditName(tag.name);
                       setEditColor(tag.color);
                     }}
-                    className="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded-md hover:bg-gray-100"
                   >
                     Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="danger-ghost"
                     onClick={() => del(tag)}
-                    className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-md hover:bg-red-50"
                   >
                     Delete
-                  </button>
+                  </Button>
                 </>
               )}
             </div>

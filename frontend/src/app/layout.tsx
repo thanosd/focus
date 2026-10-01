@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CountsProvider } from "@/contexts/CountsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { ConfirmProvider } from "@/contexts/ConfirmContext";
 import Sidebar from "@/components/Sidebar";
 import AppHeader from "@/components/AppHeader";
 import Footer from "@/components/Footer";
@@ -46,14 +47,18 @@ export default function RootLayout({
         <AuthProvider>
           <CountsProvider>
             <ToastProvider>
-              <div className="min-h-screen flex flex-col bg-gray-50">
-                <AppHeader />
-                <div className="flex flex-1">
-                  <Sidebar />
-                  <main className="flex-1 min-w-0">{children}</main>
+              <ConfirmProvider>
+                <div className="min-h-screen flex flex-col bg-gray-50">
+                  <AppHeader />
+                  <div className="flex flex-1">
+                    <Sidebar />
+                    <main className="flex-1 min-w-0 flex flex-col">
+                      {children}
+                    </main>
+                  </div>
+                  <Footer />
                 </div>
-                <Footer />
-              </div>
+              </ConfirmProvider>
             </ToastProvider>
           </CountsProvider>
         </AuthProvider>

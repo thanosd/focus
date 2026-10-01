@@ -8,8 +8,9 @@ import { useProjectsAndTags } from "@/hooks/useProjectsAndTags";
 import { apiClient } from "@/lib/api-client";
 import type { Project } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { PlusIcon } from "@/components/Icons";
+import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 function ProjectsContent({ selectedId }: { selectedId?: string }) {
   const router = useRouter();
@@ -35,20 +36,25 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
     })();
   }, [activeProjects]);
 
+  const onProjectChanged = useCallback(() => {
+    reload();
+  }, [reload]);
+
   const treeProjects = showInactive ? allProjects : activeProjects;
 
   return (
-    <div className="p-6 md:p-8 flex gap-6 max-w-6xl">
-      <div className="w-72 flex-shrink-0 space-y-3">
+    <div className="flex flex-1 items-start">
+      <div className="w-72 flex-shrink-0 p-6 md:p-8 md:pr-0 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <button
-            type="button"
+          <Button
+            size="xs"
+            variant="ghost"
+            className="text-blue-600 hover:text-blue-700"
             onClick={() => setCreating((v) => !v)}
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
-            <PlusIcon /> New
-          </button>
+            <Plus className="w-3.5 h-3.5" /> New
+          </Button>
         </div>
         {creating && (
           <ProjectForm
@@ -74,28 +80,31 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
           )}
         </div>
       </div>
-      <div className="flex-1 min-w-0">
-        {selectedId ? (
+      {selectedId ? (
+        <div className="flex-1 min-w-0 flex items-start">
           <ProjectView
             key={selectedId}
             projectId={selectedId}
             projects={activeProjects}
             tags={tags}
             onCreateTag={addTag}
-            onProjectChanged={() => reload()}
+            onProjectChanged={onProjectChanged}
             onProjectDeleted={() => {
               reload();
               router.push("/projects");
             }}
+            onClose={() => router.push("/projects")}
           />
-        ) : (
+        </div>
+      ) : (
+        <div className="flex-1 min-w-0 p-6 md:p-8">
           <div className="bg-white border border-dashed border-gray-200 rounded-lg p-12 text-center text-sm text-gray-500">
             {loaded && activeProjects.length === 0
               ? "Create your first project to get started."
               : "Select a project to see its tasks."}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

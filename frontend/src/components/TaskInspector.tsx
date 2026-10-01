@@ -10,16 +10,20 @@ import type {
 } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCounts } from "@/contexts/CountsContext";
+import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dateTimeLabel, dayLabel } from "@/lib/dates";
-import { useEffect, useRef, useState } from "react";
-import { CloseIcon, FlagIcon } from "@/components/Icons";
+import { useEffect, useState } from "react";
+import { Flag, X } from "lucide-react";
 import DeferMenu from "@/components/DeferMenu";
 import DueEditor from "@/components/DueEditor";
 import ProjectPicker from "@/components/ProjectPicker";
 import TagPicker from "@/components/TagPicker";
 import RepeatEditor, { describeRepeat } from "@/components/RepeatEditor";
-import { HEADER_HEIGHT_PX } from "@/components/AppHeader";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface TaskInspectorProps {
   task: Task;
@@ -33,8 +37,9 @@ interface TaskInspectorProps {
 }
 
 /**
- * Right-side panel for editing every attribute of a task. Title and note
- * save on blur; everything else saves immediately.
+ * Inspector content for a task: title and note save on blur; everything
+ * else saves immediately. Fills whatever container hosts it (the docked
+ * pane on desktop, a sheet on mobile).
  */
 export default function TaskInspector({
   task,
@@ -49,10 +54,10 @@ export default function TaskInspector({
   const { timezone } = useAuth();
   const { refreshCounts } = useCounts();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [title, setTitle] = useState(task.title);
   const [note, setNote] = useState(task.note);
   const [busy, setBusy] = useState(false);
-  const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTitle(task.title);
@@ -61,7 +66,9 @@ export default function TaskInspector({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      // Radix layers (popovers, selects, dialogs) handle Escape first and
+      // mark the event; only close the inspector when nothing else did.
+      if (e.key === "Escape" && !e.defaultPrevented) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -84,8 +91,15 @@ export default function TaskInspector({
   };
 
   const action = async (kind: "complete" | "drop" | "reopen" | "delete") => {
-    setBusy(true);
     if (kind === "delete") {
+      const ok = await confirm({
+        title: "Delete this task?",
+        description: `"${task.title}" will be permanently deleted.`,
+        confirmLabel: "Delete",
+        destructive: true,
+      });
+      if (!ok) return;
+      setBusy(true);
       const { error } = await apiClient.DELETE("/api/tasks/{taskId}", {
         params: { path: { taskId: task.id } },
       });
@@ -99,12 +113,11 @@ export default function TaskInspector({
       onClose();
       return;
     }
+    setBusy(true);
     if (kind === "complete") {
       const { data, error } = await apiClient.POST(
         "/api/tasks/{taskId}/complete",
-        {
-          params: { path: { taskId: task.id } },
-        },
+        { params: { path: { taskId: task.id } } },
       );
       setBusy(false);
       if (error || !data) {
@@ -149,24 +162,18 @@ export default function TaskInspector({
   const isActive = task.status === "active";
 
   return (
-    <aside
-      className="fixed right-0 w-full sm:w-[26rem] bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col"
-      style={{
-        top: `${HEADER_HEIGHT_PX}px`,
-        height: `calc(100vh - ${HEADER_HEIGHT_PX}px)`,
-      }}
-      aria-label="Task details"
-    >
+    <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <span
-            className={`text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded ${
+            className={cn(
+              "text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded",
               task.status === "active"
                 ? "bg-green-50 text-green-700"
                 : task.status === "completed"
                   ? "bg-blue-50 text-blue-700"
-                  : "bg-gray-100 text-gray-500"
-            }`}
+                  : "bg-gray-100 text-gray-500",
+            )}
           >
             {task.status}
           </span>
@@ -176,19 +183,20 @@ export default function TaskInspector({
             </span>
           )}
         </div>
-        <button
+        <Button
+          size="icon"
+          variant="ghost"
           onClick={onClose}
-          className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100"
           aria-label="Close"
+          title="Close (Esc)"
         >
-          <CloseIcon />
-        </button>
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
         <div className="flex items-start gap-2">
           <input
-            ref={titleRef}
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -197,21 +205,26 @@ export default function TaskInspector({
               if (e.key === "Enter") (e.target as HTMLInputElement).blur();
             }}
             disabled={busy}
-            className="flex-1 text-base font-medium text-gray-900 border-b border-transparent hover:border-gray-200 focus:border-blue-500 focus:outline-none py-1 bg-transparent"
+            aria-label="Title"
+            className="flex-1 min-w-0 text-base font-medium text-gray-900 border-b border-transparent hover:border-gray-200 focus:border-blue-500 focus:outline-none py-1 bg-transparent"
           />
-          <button
-            type="button"
+          <Button
+            size="icon"
+            variant="ghost"
             onClick={() => patch({ flagged: !task.flagged })}
             disabled={busy}
             title={task.flagged ? "Flagged (urgent)" : "Flag as urgent"}
-            className={`p-1.5 rounded-md ${
+            className={cn(
               task.flagged
-                ? "text-red-500 bg-red-50"
-                : "text-gray-300 hover:text-orange-500 hover:bg-gray-100"
-            }`}
+                ? "text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-600"
+                : "text-gray-300 hover:text-orange-500",
+            )}
           >
-            <FlagIcon className="w-5 h-5" filled={task.flagged} />
-          </button>
+            <Flag
+              className="h-4 w-4"
+              fill={task.flagged ? "currentColor" : "none"}
+            />
+          </Button>
         </div>
 
         <Field label="Project">
@@ -220,19 +233,17 @@ export default function TaskInspector({
             value={task.project_id}
             disabled={busy}
             onChange={(id) => patch({ project_id: id })}
-            className="w-full"
           />
         </Field>
 
         <Field label="Note">
-          <textarea
+          <Textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             onBlur={saveNote}
             disabled={busy}
             rows={4}
             placeholder="Add a note…"
-            className="w-full text-sm border border-gray-300 rounded-md px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </Field>
 
@@ -256,7 +267,6 @@ export default function TaskInspector({
         >
           <DeferMenu
             task={task}
-            inline
             onUpdated={(t) => {
               onUpdated(t);
               refreshCounts();
@@ -300,46 +310,40 @@ export default function TaskInspector({
       <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-200 bg-gray-50">
         {isActive ? (
           <>
-            <button
+            <Button
+              variant="primary"
               onClick={() => action("complete")}
               disabled={busy}
-              className="text-sm font-medium px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
             >
               Complete
-            </button>
-            <button
-              onClick={() => action("drop")}
-              disabled={busy}
-              className="text-sm font-medium px-3 py-1.5 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-            >
+            </Button>
+            <Button onClick={() => action("drop")} disabled={busy}>
               Drop
-            </button>
+            </Button>
           </>
         ) : (
-          <button
+          <Button
+            variant="primary"
             onClick={() => action("reopen")}
             disabled={busy}
-            className="text-sm font-medium px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             Reopen
-          </button>
+          </Button>
         )}
-        <button
-          onClick={() => {
-            if (window.confirm("Delete this task permanently?"))
-              action("delete");
-          }}
+        <Button
+          variant="danger-ghost"
+          onClick={() => action("delete")}
           disabled={busy}
-          className="ml-auto text-sm font-medium px-3 py-1.5 rounded-md text-red-600 hover:bg-red-50 disabled:opacity-50"
+          className="ml-auto"
         >
           Delete
-        </button>
+        </Button>
       </div>
-    </aside>
+    </div>
   );
 }
 
-function Field({
+export function Field({
   label,
   hint,
   children,
@@ -350,11 +354,9 @@ function Field({
 }) {
   return (
     <div>
-      <div className="flex items-baseline justify-between mb-1.5">
-        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          {label}
-        </label>
-        {hint && <span className="text-xs text-gray-500">{hint}</span>}
+      <div className="flex items-baseline justify-between mb-1.5 gap-2">
+        <Label>{label}</Label>
+        {hint && <span className="text-xs text-gray-500 truncate">{hint}</span>}
       </div>
       {children}
     </div>

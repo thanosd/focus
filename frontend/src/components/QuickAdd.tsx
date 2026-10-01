@@ -5,7 +5,8 @@ import type { Task } from "@/lib/types";
 import { useCounts } from "@/contexts/CountsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useState } from "react";
-import { PlusIcon } from "@/components/Icons";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface QuickAddProps {
   projectId?: string;
@@ -56,9 +57,9 @@ export default function QuickAdd({
         e.preventDefault();
         submit();
       }}
-      className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+      className="flex items-center gap-2 bg-white border border-gray-300 rounded-md px-3 h-10 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
     >
-      <PlusIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      <Plus className="w-4 h-4 text-gray-400 flex-shrink-0" />
       <input
         type="text"
         value={title}
@@ -68,13 +69,9 @@ export default function QuickAdd({
         disabled={busy}
       />
       {title.trim() && (
-        <button
-          type="submit"
-          disabled={busy}
-          className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md px-2.5 py-1 disabled:opacity-50"
-        >
+        <Button type="submit" variant="primary" size="xs" disabled={busy}>
           Add
-        </button>
+        </Button>
       )}
     </form>
   );

@@ -7,13 +7,15 @@ import { useToast } from "@/contexts/ToastContext";
 import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/dates";
 import { useEffect, useState } from "react";
 import Spinner from "@/components/Spinner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface DueEditorProps {
   task: Task;
   onUpdated: (task: Task) => void;
 }
 
-/** Due date editor: datetime picker plus a natural-language input. */
+/** Due date editor: natural-language input plus a datetime picker. */
 export default function DueEditor({ task, onUpdated }: DueEditorProps) {
   const { timezone } = useAuth();
   const { toast } = useToast();
@@ -68,53 +70,43 @@ export default function DueEditor({ task, onUpdated }: DueEditorProps) {
         }}
         className="flex items-center gap-2"
       >
-        <input
-          type="text"
+        <Input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Due… e.g. friday, end of month, in 3 days"
-          className="flex-1 text-sm border border-gray-300 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={busy}
         />
-        <button
-          type="submit"
-          disabled={busy || !text.trim()}
-          className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
-        >
+        <Button type="submit" variant="primary" disabled={busy || !text.trim()}>
           {busy && <Spinner className="w-3 h-3" />}
           Set
-        </button>
+        </Button>
       </form>
       {interpretation && (
         <p className="text-xs text-gray-500">Interpreted as {interpretation}</p>
       )}
       <div className="flex items-center gap-2">
-        <input
+        <Input
           type="datetime-local"
           value={explicit}
           onChange={(e) => setExplicit(e.target.value)}
-          className="flex-1 text-sm border border-gray-300 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={busy}
         />
-        <button
-          type="button"
+        <Button
           disabled={busy || !explicit}
           onClick={() => {
             const iso = fromDatetimeLocal(explicit, timezone);
             if (iso) patch(iso);
           }}
-          className="text-xs font-medium px-2.5 py-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-50"
         >
           Set
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
           disabled={busy || !task.due_at}
           onClick={() => patch(null)}
-          className="text-xs px-2.5 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 disabled:opacity-40"
         >
           Clear
-        </button>
+        </Button>
       </div>
     </div>
   );

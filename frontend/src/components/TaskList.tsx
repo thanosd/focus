@@ -15,6 +15,7 @@ interface TaskListProps {
   onSelect: (task: Task) => void;
   onUpdated: (task: Task) => void;
   onCompleted?: (task: Task, next?: Task) => void;
+  onDeleted?: (taskId: string) => void;
 }
 
 export default function TaskList({
@@ -29,6 +30,7 @@ export default function TaskList({
   onSelect,
   onUpdated,
   onCompleted,
+  onDeleted,
 }: TaskListProps) {
   if (error) {
     return (
@@ -57,7 +59,7 @@ export default function TaskList({
     );
   }
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-visible">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       {tasks.map((t) => (
         <TaskRow
           key={t.id}
@@ -69,6 +71,7 @@ export default function TaskList({
           onSelect={onSelect}
           onUpdated={onUpdated}
           onCompleted={onCompleted}
+          onDeleted={onDeleted}
         />
       ))}
     </div>

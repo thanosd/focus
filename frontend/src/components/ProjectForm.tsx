@@ -4,6 +4,18 @@ import { apiClient, errorMessage } from "@/lib/api-client";
 import type { Project } from "@/lib/types";
 import { useToast } from "@/contexts/ToastContext";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const TOP = "__top__";
 
 interface ProjectFormProps {
   projects: Project[];
@@ -21,7 +33,7 @@ export default function ProjectForm({
 }: ProjectFormProps) {
   const { toast } = useToast();
   const [name, setName] = useState("");
-  const [parentId, setParentId] = useState(defaultParentId ?? "");
+  const [parentId, setParentId] = useState(defaultParentId ?? TOP);
   const [sequential, setSequential] = useState(false);
   const [interval, setInterval] = useState(7);
   const [busy, setBusy] = useState(false);
@@ -38,7 +50,7 @@ export default function ProjectForm({
     const { data, error } = await apiClient.POST("/api/projects", {
       body: {
         name: name.trim(),
-        parent_id: parentId || undefined,
+        parent_id: parentId === TOP ? undefined : parentId,
         sequential,
         review_interval_days: interval,
       },
@@ -57,63 +69,52 @@ export default function ProjectForm({
       className="bg-white border border-gray-200 rounded-lg p-4 space-y-3 shadow-sm"
     >
       <div className="text-sm font-semibold text-gray-900">New project</div>
-      <input
-        type="text"
+      <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Project name"
         autoFocus
-        className="w-full text-sm border border-gray-300 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <select
-        value={parentId}
-        onChange={(e) => setParentId(e.target.value)}
-        className="w-full text-sm border border-gray-300 rounded-md px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="">Top-level project</option>
-        {topLevel.map((p) => (
-          <option key={p.id} value={p.id}>
-            Inside: {p.name}
-          </option>
-        ))}
-      </select>
+      <Select value={parentId} onValueChange={setParentId}>
+        <SelectTrigger aria-label="Parent project">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={TOP}>Top-level project</SelectItem>
+          {topLevel.map((p) => (
+            <SelectItem key={p.id} value={p.id} depth={1}>
+              Inside {p.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <label className="flex items-center gap-2 text-sm text-gray-700">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={sequential}
-          onChange={(e) => setSequential(e.target.checked)}
-          className="rounded border-gray-300"
+          onCheckedChange={(c) => setSequential(c === true)}
         />
         Sequential (only the first task is available)
       </label>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         Review every
-        <input
+        <Input
           type="number"
           min={1}
           value={interval}
           onChange={(e) =>
             setInterval(Math.max(1, Number(e.target.value) || 1))
           }
-          className="w-16 border border-gray-300 rounded-md px-2 py-1 text-sm"
+          className="w-16"
         />
         days
       </label>
       <div className="flex items-center gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={busy || !name.trim()}
-          className="text-sm font-medium px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-        >
+        <Button type="submit" variant="primary" disabled={busy || !name.trim()}>
           Create
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="text-sm px-3 py-1.5 rounded-md text-gray-600 hover:bg-gray-100"
-        >
+        </Button>
+        <Button variant="ghost" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

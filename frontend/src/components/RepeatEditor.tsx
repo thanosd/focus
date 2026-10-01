@@ -1,6 +1,15 @@
 "use client";
 
 import type { RepeatRule } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RepeatEditorProps {
   value: RepeatRule | undefined;
@@ -31,19 +40,17 @@ export default function RepeatEditor({
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-2 text-sm text-gray-700">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={enabled}
           disabled={disabled}
-          onChange={(e) => onChange(e.target.checked ? rule : null)}
-          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          onCheckedChange={(c) => onChange(c === true ? rule : null)}
         />
         Repeat
       </label>
       {enabled && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
           <span>every</span>
-          <input
+          <Input
             type="number"
             min={1}
             value={rule.every}
@@ -54,34 +61,42 @@ export default function RepeatEditor({
                 every: Math.max(1, Number(e.target.value) || 1),
               })
             }
-            className="w-16 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-16"
           />
-          <select
+          <Select
             value={rule.unit}
             disabled={disabled}
-            onChange={(e) =>
-              onChange({ ...rule, unit: e.target.value as RepeatRule["unit"] })
+            onValueChange={(v) =>
+              onChange({ ...rule, unit: v as RepeatRule["unit"] })
             }
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {UNITS.map((u) => (
-              <option key={u} value={u}>
-                {rule.every === 1 ? u : `${u}s`}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-28" aria-label="Repeat unit">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {UNITS.map((u) => (
+                <SelectItem key={u} value={u}>
+                  {rule.every === 1 ? u : `${u}s`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span>from</span>
-          <select
+          <Select
             value={rule.from}
             disabled={disabled}
-            onChange={(e) =>
-              onChange({ ...rule, from: e.target.value as RepeatRule["from"] })
+            onValueChange={(v) =>
+              onChange({ ...rule, from: v as RepeatRule["from"] })
             }
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="completion">completion date</option>
-            <option value="due">due date</option>
-          </select>
+            <SelectTrigger className="w-40" aria-label="Repeat from">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="completion">completion date</SelectItem>
+              <SelectItem value="due">due date</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       )}
     </div>

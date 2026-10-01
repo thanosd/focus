@@ -5,9 +5,13 @@ import { apiClient, errorMessage } from "@/lib/api-client";
 import { config } from "@/config/api";
 import type { ApiToken } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dayLabel } from "@/lib/dates";
 import { useEffect, useMemo, useState } from "react";
+import TimezonePicker from "@/components/TimezonePicker";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const FALLBACK_TIMEZONES = [
   "UTC",
@@ -45,6 +49,7 @@ function timezoneOptions(current: string): string[] {
 function SettingsContent() {
   const { user, timezone, refetchUser } = useAuth();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [tz, setTz] = useState(timezone);
   const [savingTz, setSavingTz] = useState(false);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
@@ -97,12 +102,13 @@ function SettingsContent() {
   };
 
   const revoke = async (token: ApiToken) => {
-    if (
-      !window.confirm(
-        `Revoke "${token.name}"? Clients using it will stop working.`,
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Revoke "${token.name}"?`,
+      description: "Clients using this token will stop working immediately.",
+      confirmLabel: "Revoke",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await apiClient.DELETE("/api/api-tokens/{tokenId}", {
       params: { path: { tokenId: token.id } },
     });
@@ -142,18 +148,12 @@ function SettingsContent() {
           tasks.
         </p>
         <div className="flex items-center gap-3">
-          <select
+          <TimezonePicker
             value={tz}
-            onChange={(e) => saveTz(e.target.value)}
+            options={options}
+            onChange={saveTz}
             disabled={savingTz}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {options.map((z) => (
-              <option key={z} value={z}>
-                {z}
-              </option>
-            ))}
-          </select>
+          />
           {savingTz && <span className="text-xs text-gray-500">Saving…</span>}
         </div>
       </section>
@@ -168,20 +168,18 @@ function SettingsContent() {
         </p>
 
         <form onSubmit={createToken} className="flex items-center gap-2 mb-4">
-          <input
-            type="text"
+          <Input
             value={tokenName}
             onChange={(e) => setTokenName(e.target.value)}
             placeholder="Token name, e.g. Claude Code on laptop"
-            className="flex-1 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={busy || !tokenName.trim()}
-            className="text-sm font-medium px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             Create token
-          </button>
+          </Button>
         </form>
 
         {newSecret && (
@@ -193,13 +191,9 @@ function SettingsContent() {
               <code className="flex-1 text-xs bg-white border border-amber-200 rounded px-2 py-1.5 break-all select-all">
                 {newSecret}
               </code>
-              <button
-                type="button"
-                onClick={() => copy(newSecret)}
-                className="text-xs font-medium px-2.5 py-1.5 rounded-md border border-amber-300 bg-white hover:bg-amber-100"
-              >
+              <Button size="xs" onClick={() => copy(newSecret)}>
                 Copy
-              </button>
+              </Button>
             </div>
             <button
               type="button"
@@ -234,13 +228,13 @@ function SettingsContent() {
                       : " · never used"}
                   </div>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  size="xs"
+                  variant="danger-ghost"
                   onClick={() => revoke(t)}
-                  className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-md hover:bg-red-50"
                 >
                   Revoke
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -254,13 +248,9 @@ function SettingsContent() {
             <pre className="flex-1 text-xs bg-gray-900 text-gray-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">
               {snippet}
             </pre>
-            <button
-              type="button"
-              onClick={() => copy(snippet)}
-              className="text-xs font-medium px-2.5 py-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-            >
+            <Button size="xs" onClick={() => copy(snippet)}>
               Copy
-            </button>
+            </Button>
           </div>
           <p className="text-xs text-gray-500">
             Any MCP client that supports the Streamable HTTP transport can use

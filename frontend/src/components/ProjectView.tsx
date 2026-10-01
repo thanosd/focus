@@ -4,21 +4,23 @@ import { apiClient, errorMessage } from "@/lib/api-client";
 import type {
   Project,
   ProjectDetail,
-  ProjectStatus,
   Tag,
   Task,
   UpdateProjectRequest,
 } from "@/lib/types";
-import { useAuth } from "@/contexts/AuthContext";
 import { useCounts } from "@/contexts/CountsContext";
+import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
-import { dayLabel } from "@/lib/dates";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronRight, SlidersHorizontal } from "lucide-react";
 import TaskList from "@/components/TaskList";
 import TaskInspector from "@/components/TaskInspector";
+import ProjectInspector from "@/components/ProjectInspector";
 import QuickAdd from "@/components/QuickAdd";
+import DockedPane from "@/components/DockedPane";
 import { StatusBadge } from "@/components/ProjectTree";
+import { Button } from "@/components/ui/button";
 
 interface ProjectViewProps {
   projectId: string;
@@ -28,15 +30,18 @@ interface ProjectViewProps {
   /** Called after any project-level change so parents can refresh lists. */
   onProjectChanged: (project: Project) => void;
   onProjectDeleted?: (id: string) => void;
+  /** Deselect the project (closes the pane on the projects page). */
+  onClose?: () => void;
   /** Extra buttons rendered next to "Mark reviewed" (review mode). */
   actions?: React.ReactNode;
-  /** Show completed/dropped tasks too. */
+  /** Review mode: tighter header. */
   compact?: boolean;
 }
 
 /**
- * Full project panel: editable header, child projects, task list with
- * quick-add and inspector. Used by /projects/[id] and the review page.
+ * Project page body: sub-projects, quick-add and task list in the main
+ * column; the docked pane shows the project's properties, or the selected
+ * task's inspector. Used by /projects/[id] and the review page.
  */
 export default function ProjectView({
   projectId,
@@ -45,17 +50,17 @@ export default function ProjectView({
   onCreateTag,
   onProjectChanged,
   onProjectDeleted,
+  onClose,
   actions,
   compact = false,
 }: ProjectViewProps) {
-  const { timezone } = useAuth();
   const { refreshCounts } = useCounts();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Task | null>(null);
-  const [name, setName] = useState("");
-  const [note, setNote] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -69,8 +74,6 @@ export default function ProjectView({
     }
     setError(null);
     setDetail(data);
-    setName(data.project.name);
-    setNote(data.project.note);
   }, [projectId]);
 
   useEffect(() => {
@@ -116,12 +119,15 @@ export default function ProjectView({
   const del = async () => {
     if (!detail) return;
     const n = detail.children.length;
-    if (
-      !window.confirm(
-        `Delete "${detail.project.name}"${n ? ` and its ${n} sub-project${n > 1 ? "s" : ""}` : ""} with all tasks?`,
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Delete "${detail.project.name}"?`,
+      description: `${
+        n ? `Its ${n} sub-project${n > 1 ? "s" : ""} and all` : "All"
+      } of its tasks will be permanently deleted.`,
+      confirmLabel: "Delete project",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await apiClient.DELETE("/api/projects/{projectId}", {
       params: { path: { projectId } },
     });
@@ -148,14 +154,7 @@ export default function ProjectView({
     setSelected((s) => (s && s.id === task.id ? task : s));
   };
 
-  const completeTask = (task: Task, next?: Task) => {
-    updateTask(task);
-    if (next) updateTask(next);
-    // Counts on the project header change; refresh quietly.
-    refreshProjectCounts();
-  };
-
-  const refreshProjectCounts = async () => {
+  const refreshProjectCounts = useCallback(async () => {
     const { data } = await apiClient.GET("/api/projects/{projectId}", {
       params: { path: { projectId } },
     });
@@ -165,17 +164,42 @@ export default function ProjectView({
       );
       onProjectChanged(data.project);
     }
+  }, [projectId, onProjectChanged]);
+
+  const completeTask = (task: Task, next?: Task) => {
+    updateTask(task);
+    if (next) updateTask(next);
+    refreshProjectCounts();
   };
+
+  const deleteTask = (id: string) => {
+    setDetail((d) =>
+      d ? { ...d, tasks: d.tasks.filter((t) => t.id !== id) } : d,
+    );
+    setSelected((s) => (s && s.id === id ? null : s));
+    refreshProjectCounts();
+  };
+
+  const closeTask = useCallback(() => setSelected(null), []);
+  const closePane = useCallback(() => {
+    setSelected(null);
+    setDetailsOpen(false);
+    onClose?.();
+  }, [onClose]);
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-        {error}
+      <div className="p-6 md:p-8 flex-1">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
       </div>
     );
   }
   if (!detail) {
-    return <div className="text-sm text-gray-500 p-4">Loading…</div>;
+    return (
+      <div className="p-6 md:p-8 text-sm text-gray-500 flex-1">Loading…</div>
+    );
   }
 
   const { project, children } = detail;
@@ -190,242 +214,140 @@ export default function ProjectView({
     detail.tasks.filter((t) => t.status === "active").length;
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        {parent && (
-          <Link
-            href={`/projects/${parent.id}`}
-            className="text-xs text-gray-500 hover:text-blue-600"
-          >
-            ↑ {parent.name}
-          </Link>
-        )}
-        <div className="flex items-start gap-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={() => {
-              const n = name.trim();
-              if (!n) setName(project.name);
-              else if (n !== project.name) patchProject({ name: n });
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            }}
-            disabled={busy}
-            className="flex-1 text-xl font-bold text-gray-900 border-b border-transparent hover:border-gray-200 focus:border-blue-500 focus:outline-none bg-transparent"
-          />
-          <StatusBadge status={project.status} />
-        </div>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onBlur={() => {
-            if (note !== project.note) patchProject({ note });
-          }}
-          disabled={busy}
-          rows={compact ? 2 : 3}
-          placeholder="Project note — what does done look like?"
-          className="w-full text-sm border border-gray-200 rounded-md px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-700">
-          <label className="flex items-center gap-1.5">
-            Status
-            <select
-              value={project.status}
-              disabled={busy}
-              onChange={(e) =>
-                patchProject({ status: e.target.value as ProjectStatus })
-              }
-              className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
-            >
-              <option value="active">Active</option>
-              <option value="on_hold">On hold</option>
-              <option value="completed">Completed</option>
-              <option value="dropped">Dropped</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={project.sequential}
-              disabled={busy}
-              onChange={(e) => patchProject({ sequential: e.target.checked })}
-              className="rounded border-gray-300"
-            />
-            Sequential
-          </label>
-          <label className="flex items-center gap-1.5">
-            Review every
-            <input
-              type="number"
-              min={1}
-              defaultValue={project.review_interval_days}
-              key={project.review_interval_days}
-              disabled={busy}
-              onBlur={(e) => {
-                const v = Math.max(1, Number(e.target.value) || 1);
-                if (v !== project.review_interval_days)
-                  patchProject({ review_interval_days: v });
-              }}
-              className="w-14 border border-gray-300 rounded-md px-2 py-1 text-sm"
-            />
-            days
-          </label>
-          {!project.parent_id && (
-            <label className="flex items-center gap-1.5">
-              Parent
-              <select
-                value=""
-                disabled={busy || children.length > 0}
-                title={
-                  children.length > 0
-                    ? "Projects with sub-projects must stay top-level"
-                    : undefined
-                }
-                onChange={(e) => {
-                  if (e.target.value)
-                    patchProject({ parent_id: e.target.value });
-                }}
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
+    <div className="flex flex-1 items-start">
+      <div className="flex-1 min-w-0 p-6 md:p-8">
+        <div className="max-w-4xl space-y-4">
+          <div>
+            {parent && (
+              <Link
+                href={`/projects/${parent.id}`}
+                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600"
               >
-                <option value="">Top-level</option>
-                {projects
-                  .filter(
-                    (p) =>
-                      !p.parent_id &&
-                      p.id !== project.id &&
-                      p.status === "active",
-                  )
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      Move under {p.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+                {parent.name}
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-gray-900 truncate">
+                  {project.name}
+                </h1>
+                {!compact && project.note && (
+                  <p className="text-sm text-gray-500 mt-0.5 line-clamp-2 whitespace-pre-line">
+                    {project.note}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 pt-1">
+                <StatusBadge status={project.status} />
+                <Button
+                  size="xs"
+                  className="md:hidden"
+                  onClick={() => {
+                    setSelected(null);
+                    setDetailsOpen(true);
+                  }}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" /> Details
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {children.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-lg">
+              <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                Sub-projects
+              </div>
+              {children.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/projects/${c.id}`}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                >
+                  <span className="flex-1 truncate">{c.name}</span>
+                  <StatusBadge status={c.status} />
+                  <span className="text-[11px] text-gray-400 tabular-nums">
+                    {c.available_task_count}/{c.remaining_task_count}
+                  </span>
+                </Link>
+              ))}
+            </div>
           )}
-          {project.parent_id && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => patchProject({ parent_id: null })}
-              className="text-xs text-gray-500 hover:text-blue-600"
+
+          <QuickAdd
+            projectId={projectId}
+            placeholder={`Add a task to ${project.name}…`}
+            onCreated={(t) => {
+              updateTask(t);
+              setSelected(t);
+              refreshProjectCounts();
+            }}
+          />
+          <TaskList
+            tasks={visibleTasks}
+            emptyMessage={
+              project.status === "active"
+                ? "No tasks. Add one above."
+                : "No active tasks."
+            }
+            projects={projects}
+            hideProject
+            selectedId={selected?.id ?? null}
+            onSelect={setSelected}
+            onUpdated={(t) => {
+              updateTask(t);
+              refreshProjectCounts();
+            }}
+            onCompleted={completeTask}
+            onDeleted={deleteTask}
+          />
+          {doneCount > 0 && (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => setShowDone((v) => !v)}
             >
-              Move to top level
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={review}
-            disabled={busy}
-            className="text-sm font-medium px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            Mark reviewed
-          </button>
-          {actions}
-          <span className="text-xs text-gray-500">
-            {project.last_reviewed_at
-              ? `Last reviewed ${dayLabel(project.last_reviewed_at, timezone)}`
-              : "Never reviewed"}
-            {project.next_review_at
-              ? ` · next ${dayLabel(project.next_review_at, timezone)}`
-              : ""}
-          </span>
-          {onProjectDeleted && (
-            <button
-              type="button"
-              onClick={del}
-              disabled={busy}
-              className="ml-auto text-xs text-red-500 hover:text-red-700"
-            >
-              Delete project
-            </button>
+              {showDone ? "Hide" : "Show"} {doneCount} completed/dropped
+            </Button>
           )}
         </div>
       </div>
 
-      {children.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg">
-          <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-            Sub-projects
-          </div>
-          {children.map((c) => (
-            <Link
-              key={c.id}
-              href={`/projects/${c.id}`}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-            >
-              <span className="flex-1 truncate">{c.name}</span>
-              <StatusBadge status={c.status} />
-              <span className="text-[11px] text-gray-400 tabular-nums">
-                {c.available_task_count}/{c.remaining_task_count}
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <QuickAdd
-        projectId={projectId}
-        placeholder={`Add a task to ${project.name}…`}
-        onCreated={(t) => {
-          updateTask(t);
-          setSelected(t);
-          refreshProjectCounts();
-        }}
-      />
-      <TaskList
-        tasks={visibleTasks}
-        emptyMessage={
-          project.status === "active"
-            ? "No tasks. Add one above."
-            : "No active tasks."
-        }
-        projects={projects}
-        hideProject
-        selectedId={selected?.id ?? null}
-        onSelect={setSelected}
-        onUpdated={(t) => {
-          updateTask(t);
-          refreshProjectCounts();
-        }}
-        onCompleted={completeTask}
-      />
-      {doneCount > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowDone((v) => !v)}
-          className="text-xs text-gray-500 hover:text-gray-800"
-        >
-          {showDone ? "Hide" : "Show"} {doneCount} completed/dropped
-        </button>
-      )}
-
-      {selected && (
-        <TaskInspector
-          task={selected}
-          projects={projects}
-          tags={tags}
-          onCreateTag={onCreateTag}
-          onUpdated={(t) => {
-            updateTask(t);
-            refreshProjectCounts();
-          }}
-          onCompleted={completeTask}
-          onDeleted={(id) => {
-            setDetail((d) =>
-              d ? { ...d, tasks: d.tasks.filter((t) => t.id !== id) } : d,
-            );
-            setSelected(null);
-            refreshProjectCounts();
-          }}
-          onClose={() => setSelected(null)}
-        />
-      )}
+      <DockedPane
+        open={!!selected || detailsOpen}
+        desktopAlwaysOpen
+        onClose={closePane}
+        label={selected ? "Task details" : "Project details"}
+      >
+        {selected ? (
+          <TaskInspector
+            task={selected}
+            projects={projects}
+            tags={tags}
+            onCreateTag={onCreateTag}
+            onUpdated={(t) => {
+              updateTask(t);
+              refreshProjectCounts();
+            }}
+            onCompleted={completeTask}
+            onDeleted={deleteTask}
+            onClose={closeTask}
+          />
+        ) : (
+          <ProjectInspector
+            project={project}
+            projects={projects}
+            childCount={children.length}
+            busy={busy}
+            onPatch={patchProject}
+            onReview={review}
+            onDelete={onProjectDeleted ? del : undefined}
+            actions={actions}
+            onClose={closePane}
+          />
+        )}
+      </DockedPane>
     </div>
   );
 }
