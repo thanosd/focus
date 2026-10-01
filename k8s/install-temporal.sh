@@ -53,8 +53,8 @@ RDS_ENDPOINT="${RDS_ENDPOINT:-$(jq -r '.POSTGRES_HOST // empty' <<<"${TEMPORAL_S
 # would make the chart split "host:5432" at the wrong colon and Temporal would
 # try to reach host "postgresql" on port "//user" — repair the common mistake
 # and refuse anything that still isn't a hostname.
-if [[ ${RDS_ENDPOINT} == *"://"* ]]; then
-	echo -e "${YELLOW}POSTGRES_HOST looks like a URL; extracting the hostname.${NC}"
+if [[ ${RDS_ENDPOINT} == *[:/@]* ]]; then
+	echo -e "${YELLOW}POSTGRES_HOST looks like a connection string; extracting the hostname.${NC}"
 	RDS_ENDPOINT="${RDS_ENDPOINT#*://}" # strip scheme
 	RDS_ENDPOINT="${RDS_ENDPOINT##*@}"  # strip user:password@
 	RDS_ENDPOINT="${RDS_ENDPOINT%%/*}"  # strip /database?params
