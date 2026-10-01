@@ -11,7 +11,8 @@ persistence on the shared Cosmic RDS.
    `focus_temporal` — created by `deploy/bootstrap-db.sh`.
 2. Secrets Manager secret `focus/temporal` with `POSTGRES_HOST`,
    `POSTGRES_USER`, `POSTGRES_PWD`.
-3. `kubeconfig.yaml` in this directory (`aws eks update-kubeconfig …`).
+3. `kubeconfig.yaml` at the repo root (gitignored):
+   `aws eks update-kubeconfig --name cosmic-cluster --region us-east-1 --profile cosmic --kubeconfig kubeconfig.yaml`.
 
 ## Install / upgrade
 

@@ -22,6 +22,7 @@ infra/Pulumi.*.yaml
 !infra/Pulumi.yaml
 
 # Deployment artifacts
+/kubeconfig.yaml
 instance-ip.txt
 db-host.txt
 db-password.txt

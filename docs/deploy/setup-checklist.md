@@ -108,10 +108,8 @@ aws secretsmanager create-secret --profile cosmic --name focus/temporal \
 ## 8. Temporal
 
 ```bash
-cd k8s
-aws eks update-kubeconfig --name cosmic-cluster --region us-east-1 --profile cosmic
-cp ~/.kube/config kubeconfig.yaml
-./install-temporal.sh
+aws eks update-kubeconfig --name cosmic-cluster --region us-east-1 --profile cosmic --kubeconfig kubeconfig.yaml
+./k8s/install-temporal.sh
 ```
 
 Installs the `temporalio/temporal` chart (pinned 1.4.0) into

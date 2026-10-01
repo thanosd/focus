@@ -23,13 +23,18 @@ NC='\033[0m' # No Color
 
 cd "$(dirname "$0")"
 
-if [[ ! -f "kubeconfig.yaml" ]]; then
-	echo -e "${RED}Error: kubeconfig.yaml not found!${NC}"
-	echo "Run: aws eks update-kubeconfig --name cosmic-cluster --region us-east-1"
-	echo "Then: cp ~/.kube/config kubeconfig.yaml"
+# The kubeconfig lives at the repo root (../kubeconfig.yaml, gitignored) so
+# nothing touches ~/.kube. Write it with:
+#   aws eks update-kubeconfig --name cosmic-cluster --region us-east-1 \
+#     --profile cosmic --kubeconfig kubeconfig.yaml
+KUBECONFIG_FILE="${KUBECONFIG_FILE:-../kubeconfig.yaml}"
+if [[ ! -f ${KUBECONFIG_FILE} ]]; then
+	echo -e "${RED}Error: ${KUBECONFIG_FILE} not found!${NC}"
+	echo "From the repo root run:"
+	echo "  aws eks update-kubeconfig --name cosmic-cluster --region us-east-1 --profile cosmic --kubeconfig kubeconfig.yaml"
 	exit 1
 fi
-export KUBECONFIG=./kubeconfig.yaml
+export KUBECONFIG="${KUBECONFIG_FILE}"
 
 echo -e "${YELLOW}Checking kubectl configuration...${NC}"
 if ! kubectl cluster-info &>/dev/null; then
