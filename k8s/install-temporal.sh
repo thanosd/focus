@@ -49,6 +49,22 @@ TEMPORAL_SM=$(aws secretsmanager get-secret-value --secret-id focus/temporal \
 TEMPORAL_PW=$(jq -r .POSTGRES_PWD <<<"${TEMPORAL_SM}")
 RDS_ENDPOINT="${RDS_ENDPOINT:-$(jq -r '.POSTGRES_HOST // empty' <<<"${TEMPORAL_SM}")}"
 
+# POSTGRES_HOST must be a bare hostname. A full URL (postgresql://user:pw@host:5432/db)
+# would make the chart split "host:5432" at the wrong colon and Temporal would
+# try to reach host "postgresql" on port "//user" — repair the common mistake
+# and refuse anything that still isn't a hostname.
+if [[ ${RDS_ENDPOINT} == *"://"* ]]; then
+	echo -e "${YELLOW}POSTGRES_HOST looks like a URL; extracting the hostname.${NC}"
+	RDS_ENDPOINT="${RDS_ENDPOINT#*://}" # strip scheme
+	RDS_ENDPOINT="${RDS_ENDPOINT##*@}"  # strip user:password@
+	RDS_ENDPOINT="${RDS_ENDPOINT%%/*}"  # strip /database?params
+	RDS_ENDPOINT="${RDS_ENDPOINT%%:*}"  # strip :port
+fi
+if [[ -n ${RDS_ENDPOINT} && ${RDS_ENDPOINT} == *[:/@]* ]]; then
+	echo -e "${RED}Error: RDS endpoint must be a bare hostname, got '${RDS_ENDPOINT}'.${NC}"
+	exit 1
+fi
+
 if [[ -z ${RDS_ENDPOINT} ]]; then
 	echo -e "${RED}Error: RDS endpoint unknown.${NC}"
 	echo "Either add POSTGRES_HOST to the focus/temporal secret in Secrets"
