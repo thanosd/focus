@@ -79,7 +79,7 @@ env var, add it there AND to the Helm chart (`k8s/focus/templates/secrets.yaml`
 focus/
 ├── api/              # OpenAPI spec (source of truth for API types)
 ├── backend/          # Go backend
-│   ├── cmd/focus/    # Entry point: server | worker | migrate
+│   ├── cmd/focus/    # Entry point: server | worker | migrate | import-omnifocus
 │   ├── internal/
 │   │   ├── domain/      # Pure types (Task, Project, Tag, RepeatRule…)
 │   │   ├── ports/       # Repository interfaces
@@ -87,6 +87,7 @@ focus/
 │   │   ├── services/    # Business logic; services/dateparse = NL dates
 │   │   ├── handlers/    # HTTP handlers + router
 │   │   ├── mcpserver/   # MCP tools over streamable HTTP
+│   │   ├── importer/    # OmniFocus CSV import (focus import-omnifocus)
 │   │   └── temporal/    # Workflows, activities, schedules, worker
 │   └── migrations/   # Numbered SQL migrations
 ├── frontend/         # Next.js app

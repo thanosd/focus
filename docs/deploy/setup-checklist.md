@@ -124,6 +124,12 @@ auto-registers the `focus` Temporal namespace and the nightly schedule.
 - [ ] Open <https://focus.cosmicteacups.com>, sign in with Google.
 - [ ] Settings → create an API token → `claude mcp add --transport http focus https://focus-api.cosmicteacups.com/mcp --header "Authorization: Bearer fcs_..."`
 
+## 10. Import your OmniFocus data (optional)
+
+See [../import-omnifocus.md](../import-omnifocus.md): dry-run first, then run
+`focus import-omnifocus` against the production `DATABASE_URL` over
+Tailscale or via `kubectl exec` into the backend pod.
+
 ## Summary of named things
 
 | Kind                | Name                                                                    |

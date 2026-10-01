@@ -1,0 +1,17 @@
+Task ID,Type,Name,Status,Project,Context,Start Date,Planned Date,Due Date,Completion Date,Duration,Flagged,Notes,Tags
+1,Project,Single Tasks,active,,,,,,,,0,,
+1.1,Action,Book flights,,Single Tasks,Computer,2026-09-07 07:00:00 +0000,,,,,0,https://example.com,Computer
+1.2,Action,Call plumber,,Single Tasks,Phone,,,2026-09-04 04:00:00 +0000,,,1,,"Phone, Home"
+1.3,Action,Already done,,Single Tasks,Computer,,,,2026-08-01 10:00:00 +0000,,0,,Computer
+2,Project,Maintain House,active,,,,,,,,0,,
+2.1,Action,Recurring,,Maintain House,,,,,,,0,,
+2.1.1,Action,Water bills,,Maintain House,Home,2026-10-09 07:00:00 +0000,,2027-10-11 00:00:00 +0000,,,1,"Hey Tony,
+
+Multi-line note with a ""quote"".",Home
+2.1.2,Action,Change filters,,Maintain House,Home,,,,,,0,,Home
+2.2,Action,Paint stairs,,Maintain House,No Hurry,,,,,,0,,No Hurry
+2.3,Action,Cleanup attic,,Maintain House,Home Improvement,2023-09-01 07:00:00 +0000,,,,,0,,Home Improvement
+2.3.1,Action,Cleanup attic,,Maintain House,No Hurry,2026-08-15 07:00:00 +0000,,,,,0,,No Hurry
+3,Project,Wind Meter,inactive,,,,,,,,0,,
+3.1,Action,Calibrate,,Wind Meter,Computer,2024-05-11 07:00:00 +0000,,,,,0,,Computer
+4,Project,Empty,active,,,,,,,,0,,

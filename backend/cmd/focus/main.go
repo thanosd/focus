@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,7 +22,9 @@ import (
 	"github.com/thanosd/focus/backend/internal/adapters"
 	"github.com/thanosd/focus/backend/internal/config"
 	"github.com/thanosd/focus/backend/internal/database"
+	"github.com/thanosd/focus/backend/internal/domain"
 	"github.com/thanosd/focus/backend/internal/handlers"
+	"github.com/thanosd/focus/backend/internal/importer"
 	"github.com/thanosd/focus/backend/internal/mcpserver"
 	"github.com/thanosd/focus/backend/internal/services"
 	"github.com/thanosd/focus/backend/internal/services/dateparse"
@@ -45,6 +48,8 @@ func main() {
 		runWorker(cfg)
 	case "migrate":
 		runMigrate(cfg)
+	case "import-omnifocus":
+		runImportOmniFocus(cfg, os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", os.Args[1])
 		printUsage()
@@ -59,6 +64,8 @@ func printUsage() {
 	fmt.Println("  server    Start the HTTP API (+ MCP endpoint at /mcp)")
 	fmt.Println("  worker    Start the Temporal worker (nightly maintenance)")
 	fmt.Println("  migrate   Apply pending database migrations")
+	fmt.Println("  import-omnifocus <export.csv> --user <email> [--dry-run] [--allow-existing]")
+	fmt.Println("            Import an OmniFocus CSV export into that user's account")
 }
 
 func openDB(cfg *config.Config) *sql.DB {
@@ -211,4 +218,102 @@ func runWorker(cfg *config.Config) {
 	if err := w.Start(); err != nil {
 		log.Fatalf("Worker error: %v", err)
 	}
+}
+
+// runImportOmniFocus loads an OmniFocus CSV export. --dry-run parses and
+// prints the plan without touching the database. The user row is created
+// (by email) when it doesn't exist yet so the import can run before the
+// first sign-in; Google fills in the profile on login.
+func runImportOmniFocus(cfg *config.Config, args []string) {
+	fs := flag.NewFlagSet("import-omnifocus", flag.ExitOnError)
+	userEmail := fs.String("user", "", "email of the account to import into (required)")
+	dryRun := fs.Bool("dry-run", false, "parse and print the plan without writing anything")
+	allowExisting := fs.Bool("allow-existing", false, "import even if the account already has projects or tasks")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage: focus import-omnifocus <export.csv> --user <email> [--dry-run] [--allow-existing]")
+		fs.PrintDefaults()
+	}
+	// Accept the file path before or after the flags.
+	var path string
+	var rest []string
+	for _, a := range args {
+		if path == "" && !strings.HasPrefix(a, "-") && strings.HasSuffix(strings.ToLower(a), ".csv") {
+			path = a
+			continue
+		}
+		rest = append(rest, a)
+	}
+	_ = fs.Parse(rest)
+	if path == "" && fs.NArg() > 0 {
+		path = fs.Arg(0)
+	}
+	if path == "" {
+		fs.Usage()
+		os.Exit(2)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("open %s: %v", path, err)
+	}
+	defer func() { _ = f.Close() }()
+	plan, err := importer.Parse(f)
+	if err != nil {
+		log.Fatalf("parse %s: %v", path, err)
+	}
+	fmt.Print(plan.Summary())
+	if *dryRun {
+		fmt.Println("\nDry run: nothing written.")
+		return
+	}
+	if *userEmail == "" {
+		log.Fatal("--user <email> is required (omit it only with --dry-run)")
+	}
+	if !cfg.IsEmailAllowed(*userEmail) && len(cfg.AuthAllowedEmails) > 0 {
+		log.Printf("warning: %s is not in AUTH_ALLOWED_EMAILS; they won't be able to sign in until added", *userEmail)
+	}
+
+	db := openDB(cfg)
+	defer func() { _ = db.Close() }()
+	ctx := context.Background()
+	userRepo := adapters.NewUserRepository(db)
+	projectRepo := adapters.NewProjectRepository(db)
+	taskRepo := adapters.NewTaskRepository(db)
+	tagRepo := adapters.NewTagRepository(db)
+
+	user, err := userRepo.GetByEmail(ctx, *userEmail)
+	if err != nil {
+		log.Fatalf("look up user: %v", err)
+	}
+	if user == nil {
+		if user, err = userRepo.UpsertFromGoogle(ctx, *userEmail, "", "", ""); err != nil {
+			log.Fatalf("create user: %v", err)
+		}
+		fmt.Printf("Created account for %s\n", user.Email)
+	}
+	if !*allowExisting {
+		existing, err := projectRepo.List(ctx, user.ID, []domain.ProjectStatus{domain.ProjectActive, domain.ProjectOnHold, domain.ProjectCompleted, domain.ProjectDropped})
+		if err != nil {
+			log.Fatalf("check existing projects: %v", err)
+		}
+		tasks, err := taskRepo.List(ctx, user.ID, domain.TaskFilter{View: domain.ViewAll})
+		if err != nil {
+			log.Fatalf("check existing tasks: %v", err)
+		}
+		if len(existing) > 0 || len(tasks) > 0 {
+			log.Fatalf("%s already has %d projects and %d active tasks; re-run with --allow-existing to import anyway (this does not de-duplicate)", user.Email, len(existing), len(tasks))
+		}
+	}
+
+	parser := dateparse.NewParser(nil)
+	im := &importer.Importer{
+		Projects: services.NewProjectService(projectRepo, taskRepo),
+		Tasks:    services.NewTaskService(taskRepo, projectRepo, parser),
+		Tags:     services.NewTagService(tagRepo),
+		TaskRepo: taskRepo,
+	}
+	res, err := im.Apply(ctx, user.ID, plan)
+	if err != nil {
+		log.Fatalf("import failed: %v", err)
+	}
+	fmt.Printf("\nImported %d projects, %d tasks, %d new tags for %s\n", res.Projects, res.Tasks, res.Tags, user.Email)
 }
