@@ -590,6 +590,9 @@ type ListTasksParams struct {
 	// ProjectId Only tasks in this project
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
 
+	// IncludeSubprojects With project_id, also include tasks of every sub-project (the whole subtree)
+	IncludeSubprojects *bool `form:"include_subprojects,omitempty" json:"include_subprojects,omitempty"`
+
 	// TagId Only tasks carrying this tag
 	TagId *openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
 

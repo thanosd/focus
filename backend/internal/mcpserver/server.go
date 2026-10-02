@@ -189,11 +189,12 @@ func toolErr(err error) (*mcp.CallToolResult, any, error) {
 // ── Tool inputs ──────────────────────────────────────────────────────
 
 type listTasksIn struct {
-	View      string `json:"view,omitempty" jsonschema:"Which list: inbox (unprocessed captures), available (default; actionable now), flagged (urgent), due (has a due date), completed (recent), all (every active task)"`
-	ProjectID string `json:"project_id,omitempty" jsonschema:"Only tasks in this project"`
-	Project   string `json:"project,omitempty" jsonschema:"Only tasks in the project with this name (case-insensitive) — alternative to project_id"`
-	Tag       string `json:"tag,omitempty" jsonschema:"Only tasks carrying this tag name"`
-	Query     string `json:"query,omitempty" jsonschema:"Case-insensitive search in title and note"`
+	View               string `json:"view,omitempty" jsonschema:"Which list: inbox (unprocessed captures), available (default; actionable now), flagged (urgent), due (has a due date), completed (recent), all (every active task)"`
+	ProjectID          string `json:"project_id,omitempty" jsonschema:"Only tasks in this project"`
+	Project            string `json:"project,omitempty" jsonschema:"Only tasks in the project with this name (case-insensitive) — alternative to project_id"`
+	IncludeSubprojects bool   `json:"include_subprojects,omitempty" jsonschema:"With a project, also include tasks of all its sub-projects"`
+	Tag                string `json:"tag,omitempty" jsonschema:"Only tasks carrying this tag name"`
+	Query              string `json:"query,omitempty" jsonschema:"Case-insensitive search in title and note"`
 }
 
 type taskIDIn struct {
@@ -371,6 +372,7 @@ func (s *Server) listTasks(ctx context.Context, req *mcp.CallToolRequest, in lis
 			return toolErr(err)
 		}
 		f.ProjectID = pid
+		f.IncludeSubprojects = in.IncludeSubprojects
 	}
 	if in.Tag != "" {
 		tags, err := s.deps.Tags.List(ctx, user.ID)

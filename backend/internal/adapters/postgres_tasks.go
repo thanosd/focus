@@ -136,7 +136,18 @@ func (r *TaskRepo) List(ctx context.Context, userID string, f domain.TaskFilter)
 		return nil, fmt.Errorf("%w: unknown view %q", domain.ErrValidation, f.View)
 	}
 	if f.ProjectID != nil {
-		conds = append(conds, "x.project_id = "+next(*f.ProjectID))
+		if f.IncludeSubprojects {
+			// The project and every descendant (three levels max, but the
+			// recursive CTE doesn't care).
+			conds = append(conds, `x.project_id IN (
+				WITH RECURSIVE sub AS (
+					SELECT id FROM projects WHERE id = `+next(*f.ProjectID)+`
+					UNION ALL
+					SELECT p.id FROM projects p JOIN sub ON p.parent_id = sub.id
+				) SELECT id FROM sub)`)
+		} else {
+			conds = append(conds, "x.project_id = "+next(*f.ProjectID))
+		}
 	}
 	if f.TagID != nil {
 		conds = append(conds, "EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = x.id AND tt.tag_id = "+next(*f.TagID)+")")

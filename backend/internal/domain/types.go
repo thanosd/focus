@@ -415,8 +415,10 @@ const (
 type TaskFilter struct {
 	View      TaskView
 	ProjectID *string
-	TagID     *string
-	Query     string
+	// IncludeSubprojects widens ProjectID to the project's whole subtree.
+	IncludeSubprojects bool
+	TagID              *string
+	Query              string
 }
 
 // Counts are the sidebar badge numbers.

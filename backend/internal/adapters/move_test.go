@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/thanosd/focus/backend/internal/adapters"
+	"github.com/thanosd/focus/backend/internal/domain"
 	"github.com/thanosd/focus/backend/internal/services"
 	"github.com/thanosd/focus/backend/internal/services/dateparse"
 	"github.com/thanosd/focus/backend/internal/testdb"
@@ -26,6 +27,13 @@ func TestMoveProjectWithChildrenUnderBucket(t *testing.T) {
 	recurring, _ := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Recurring", ParentID: &house.ID})
 	_, _ = taskSvc.Create(ctx, user.ID, services.CreateTaskInput{Title: "Water bills", ProjectID: &recurring.ID})
 	personal, _ := projSvc.Create(ctx, user.ID, services.CreateProjectInput{Name: "Personal"})
+
+	_, _ = taskSvc.Create(ctx, user.ID, services.CreateTaskInput{Title: "Fix gutter", ProjectID: &house.ID})
+	direct, _ := taskSvc.List(ctx, user.ID, domain.TaskFilter{View: domain.ViewAll, ProjectID: &house.ID})
+	whole, _ := taskSvc.List(ctx, user.ID, domain.TaskFilter{View: domain.ViewAll, ProjectID: &house.ID, IncludeSubprojects: true})
+	if len(direct) != 1 || len(whole) != 2 {
+		t.Fatalf("subtree listing: direct=%d whole=%d", len(direct), len(whole))
+	}
 
 	moved, err := projSvc.Update(ctx, user.ID, house.ID, services.ProjectPatch{SetParent: true, ParentID: &personal.ID})
 	if err != nil {

@@ -22,6 +22,12 @@
         schema:
           type: string
           format: uuid
+      - name: include_subprojects
+        in: query
+        required: false
+        description: With project_id, also include tasks of every sub-project (the whole subtree)
+        schema:
+          type: boolean
       - name: tag_id
         in: query
         required: false

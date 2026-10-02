@@ -32,6 +32,7 @@ func (h *TaskHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 	f := domain.TaskFilter{View: domain.TaskView(q.Get("view")), Query: q.Get("q")}
 	if v := q.Get("project_id"); v != "" {
 		f.ProjectID = &v
+		f.IncludeSubprojects = q.Get("include_subprojects") == "true"
 	}
 	if v := q.Get("tag_id"); v != "" {
 		f.TagID = &v

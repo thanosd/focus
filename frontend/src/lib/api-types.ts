@@ -1138,6 +1138,8 @@ export interface operations {
                 view?: "inbox" | "available" | "flagged" | "due" | "completed" | "all";
                 /** @description Only tasks in this project */
                 project_id?: string;
+                /** @description With project_id, also include tasks of every sub-project (the whole subtree) */
+                include_subprojects?: boolean;
                 /** @description Only tasks carrying this tag */
                 tag_id?: string;
                 /** @description Case-insensitive title/note search */
