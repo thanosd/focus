@@ -53,6 +53,8 @@ interface TaskRowProps {
   showProjectPicker?: boolean;
   /** Hide the project chip (e.g. inside a project's own list). */
   hideProject?: boolean;
+  /** Tag to omit from the chips (the section's own tag in grouped views). */
+  hideTagId?: string;
   selected?: boolean;
   /** 1-based position shown for sequential projects. */
   index?: number;
@@ -71,6 +73,7 @@ export default function TaskRow({
   projects = [],
   showProjectPicker = false,
   hideProject = false,
+  hideTagId,
   selected = false,
   index,
   handleProps,
@@ -256,18 +259,7 @@ export default function TaskRow({
         // Repeating task: say it comes back BEFORE the user clicks.
         return (
           <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="flex items-start gap-1 flex-shrink-0">
-                {checkbox}
-                <Repeat
-                  className={cn(
-                    "mt-1 w-3.5 h-3.5 flex-shrink-0",
-                    muted ? "text-gray-300" : "text-blue-500",
-                  )}
-                  aria-hidden="true"
-                />
-              </span>
-            </TooltipTrigger>
+            <TooltipTrigger asChild>{checkbox}</TooltipTrigger>
             <TooltipContent side="top" align="start">
               {summary}
             </TooltipContent>
@@ -291,6 +283,24 @@ export default function TaskRow({
           >
             {task.title}
           </span>
+          {task.repeat_rule && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex-shrink-0 inline-flex" tabIndex={-1}>
+                  <Repeat
+                    className={cn(
+                      "w-3.5 h-3.5",
+                      muted ? "text-gray-300" : "text-blue-500",
+                    )}
+                    aria-label="Repeating task"
+                  />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="start">
+                {repeatSummary(task, timezone)}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {reason && (
             <span
               className="hidden sm:inline text-[10px] text-gray-400 italic whitespace-nowrap flex-shrink-0"
@@ -365,9 +375,11 @@ export default function TaskRow({
                 {dateTimeLabel(task.due_at, timezone)}
               </span>
             )}
-            {task.tags.map((t) => (
-              <TagChip key={t.id} tag={t} />
-            ))}
+            {task.tags
+              .filter((t) => t.id !== hideTagId)
+              .map((t) => (
+                <TagChip key={t.id} tag={t} />
+              ))}
           </div>
         )}
       </div>

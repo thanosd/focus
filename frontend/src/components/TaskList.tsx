@@ -29,6 +29,8 @@ interface TaskListProps {
   projects?: Project[];
   showProjectPicker?: boolean;
   hideProject?: boolean;
+  /** Tag to omit from row chips (grouped tag views). */
+  hideTagId?: string;
   /** Number active tasks 1, 2, 3… (sequential projects). */
   numbered?: boolean;
   /**
@@ -85,6 +87,7 @@ export default function TaskList({
   projects,
   showProjectPicker,
   hideProject,
+  hideTagId,
   numbered = false,
   onReorder,
   selectedId,
@@ -131,6 +134,7 @@ export default function TaskList({
     projects,
     showProjectPicker,
     hideProject,
+    hideTagId,
     selectedId,
     onSelect,
     onUpdated,

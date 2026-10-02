@@ -191,6 +191,7 @@ export default function GroupedTaskView({
                   <TaskList
                     tasks={g.tasks}
                     projects={projects}
+                    hideTagId={g.key}
                     selectedId={selected?.id ?? null}
                     onSelect={setSelected}
                     onUpdated={handleUpdated}
