@@ -20,9 +20,10 @@ trunk:
 build:
 	go build ./backend/...
 
-# Run Go tests (host)
+# Run Go tests (host). TZ=UTC matches CI so timezone bugs can't hide behind
+# the developer machine's local zone.
 test:
-	go test ./backend/...
+	TZ=UTC go test ./backend/...
 
 # TypeScript type checking (host)
 types:

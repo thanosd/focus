@@ -78,29 +78,28 @@ const upcomingCount = 3
 // repeatPreview says when the next occurrences would land if the task
 // were completed now: anchored/from-due rules advance from the task's own
 // date, completion-based ones from now.
-func repeatPreview(t *domain.Task) (string, *[]time.Time) {
+func repeatPreview(t *domain.Task, loc *time.Location) (string, *[]time.Time) {
 	if t.RepeatRule == nil {
 		return "", nil
 	}
-	base := time.Now()
+	base := time.Now().In(loc)
 	if t.RepeatRule.From == domain.RepeatFromDue {
 		switch {
 		case t.DueAt != nil:
-			base = *t.DueAt
+			base = t.DueAt.In(loc)
 		case t.DeferUntil != nil:
-			base = *t.DeferUntil
+			base = t.DeferUntil.In(loc)
 		}
 	} else if t.DueAt != nil {
-		loc := t.DueAt.Location()
-		n := base.In(loc)
-		base = time.Date(n.Year(), n.Month(), n.Day(), t.DueAt.In(loc).Hour(), t.DueAt.In(loc).Minute(), 0, 0, loc)
+		due := t.DueAt.In(loc)
+		base = time.Date(base.Year(), base.Month(), base.Day(), due.Hour(), due.Minute(), 0, 0, loc)
 	}
 	ups := t.RepeatRule.Upcoming(base, upcomingCount)
 	return t.RepeatRule.Describe(), &ups
 }
 
-func toAPITask(t *domain.Task) api.Task {
-	desc, ups := repeatPreview(t)
+func toAPITask(t *domain.Task, loc *time.Location) api.Task {
+	desc, ups := repeatPreview(t, loc)
 	return api.Task{
 		RepeatDescription: strPtr(desc),
 		NextOccurrences:   ups,
@@ -124,10 +123,10 @@ func toAPITask(t *domain.Task) api.Task {
 	}
 }
 
-func toAPITasks(ts []domain.Task) []api.Task {
+func toAPITasks(ts []domain.Task, loc *time.Location) []api.Task {
 	out := make([]api.Task, 0, len(ts))
 	for i := range ts {
-		out = append(out, toAPITask(&ts[i]))
+		out = append(out, toAPITask(&ts[i], loc))
 	}
 	return out
 }

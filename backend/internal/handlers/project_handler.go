@@ -79,7 +79,7 @@ func (h *ProjectHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, api.ProjectDetail{
 		Project:  toAPIProject(d.Project),
-		Tasks:    toAPITasks(d.Tasks),
+		Tasks:    toAPITasks(d.Tasks, user.Location()),
 		Children: toAPIProjects(d.Children),
 	})
 }

@@ -186,12 +186,18 @@ func (s *TaskService) Update(ctx context.Context, userID, id string, p TaskPatch
 
 // Complete marks the task done. Repeating tasks spawn their next
 // occurrence, which is returned as the second value.
-func (s *TaskService) Complete(ctx context.Context, userID, id string) (*domain.Task, *domain.Task, error) {
+//
+// Repeat arithmetic runs in the user's timezone: Postgres hands timestamps
+// back in the process's local zone, and "the 1st of the month" or "every
+// Friday" must be read on the user's calendar, not the server's.
+func (s *TaskService) Complete(ctx context.Context, user *domain.User, id string) (*domain.Task, *domain.Task, error) {
+	userID := user.ID
+	loc := user.Location()
 	t, err := s.Get(ctx, userID, id)
 	if err != nil {
 		return nil, nil, err
 	}
-	now := time.Now()
+	now := time.Now().In(loc)
 	if t.Status == domain.TaskCompleted {
 		return t, nil, nil
 	}
@@ -204,7 +210,7 @@ func (s *TaskService) Complete(ctx context.Context, userID, id string) (*domain.
 
 	var next *domain.Task
 	if t.RepeatRule != nil {
-		next, err = s.spawnNext(ctx, t, now)
+		next, err = s.spawnNext(ctx, t, now, loc)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -225,8 +231,17 @@ func (s *TaskService) Complete(ctx context.Context, userID, id string) (*domain.
 // from=due: dates advance from their previous values, catching up past
 // the completion time, so a monthly "1st" task stays on the 1st however
 // late it was finished.
-func (s *TaskService) spawnNext(ctx context.Context, done *domain.Task, completedAt time.Time) (*domain.Task, error) {
+func (s *TaskService) spawnNext(ctx context.Context, done *domain.Task, completedAt time.Time, loc *time.Location) (*domain.Task, error) {
 	rule := *done.RepeatRule
+	completedAt = completedAt.In(loc)
+	if done.DueAt != nil {
+		d := done.DueAt.In(loc)
+		done.DueAt = &d
+	}
+	if done.DeferUntil != nil {
+		d := done.DeferUntil.In(loc)
+		done.DeferUntil = &d
+	}
 	next := &domain.Task{
 		UserID:     done.UserID,
 		ProjectID:  done.ProjectID,

@@ -142,12 +142,12 @@ func toTaskOut(t *domain.Task, loc *time.Location) taskOut {
 	if t.RepeatRule != nil {
 		r := t.RepeatRule.Describe()
 		out.Repeat = &r
-		base := time.Now()
+		base := time.Now().In(loc)
 		if t.RepeatRule.From == domain.RepeatFromDue {
 			if t.DueAt != nil {
-				base = *t.DueAt
+				base = t.DueAt.In(loc)
 			} else if t.DeferUntil != nil {
-				base = *t.DeferUntil
+				base = t.DeferUntil.In(loc)
 			}
 		}
 		for _, u := range t.RepeatRule.Upcoming(base, 3) {
@@ -521,7 +521,7 @@ func (s *Server) completeTask(ctx context.Context, req *mcp.CallToolRequest, in 
 	if err != nil {
 		return nil, nil, err
 	}
-	done, next, err := s.deps.Tasks.Complete(ctx, user.ID, in.TaskID)
+	done, next, err := s.deps.Tasks.Complete(ctx, user, in.TaskID)
 	if err != nil {
 		return toolErr(err)
 	}

@@ -41,7 +41,7 @@ func (h *TaskHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPITasks(tasks))
+	writeJSON(w, http.StatusOK, toAPITasks(tasks, user.Location()))
 }
 
 // HandleCreate creates a task.
@@ -74,7 +74,7 @@ func (h *TaskHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, toAPITask(t))
+	writeJSON(w, http.StatusCreated, toAPITask(t, user.Location()))
 }
 
 // HandleGet returns one task.
@@ -92,7 +92,7 @@ func (h *TaskHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPITask(t))
+	writeJSON(w, http.StatusOK, toAPITask(t, user.Location()))
 }
 
 // updateTaskBody keeps nullable fields as RawMessage so an explicit
@@ -188,7 +188,7 @@ func (h *TaskHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPITask(t))
+	writeJSON(w, http.StatusOK, toAPITask(t, user.Location()))
 }
 
 // HandleDelete deletes a task.
@@ -218,14 +218,14 @@ func (h *TaskHandler) HandleComplete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	done, next, err := h.tasks.Complete(r.Context(), user.ID, id)
+	done, next, err := h.tasks.Complete(r.Context(), user, id)
 	if err != nil {
 		writeServiceError(w, err)
 		return
 	}
-	resp := api.CompleteTaskResponse{Task: toAPITask(done)}
+	resp := api.CompleteTaskResponse{Task: toAPITask(done, user.Location())}
 	if next != nil {
-		n := toAPITask(next)
+		n := toAPITask(next, user.Location())
 		resp.NextTask = &n
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -255,7 +255,7 @@ func (h *TaskHandler) simpleAction(w http.ResponseWriter, r *http.Request, fn fu
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPITask(t))
+	writeJSON(w, http.StatusOK, toAPITask(t, user.Location()))
 }
 
 // HandleReorder applies a drag-and-drop ordering.
@@ -278,7 +278,7 @@ func (h *TaskHandler) HandleReorder(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPITasks(tasks))
+	writeJSON(w, http.StatusOK, toAPITasks(tasks, user.Location()))
 }
 
 // HandleDefer sets the defer date from a phrase, timestamp, or clears it.
@@ -316,7 +316,7 @@ func (h *TaskHandler) HandleDefer(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPITask(t))
+	writeJSON(w, http.StatusOK, toAPITask(t, user.Location()))
 }
 
 func locationFrom(w http.ResponseWriter, tz *string, fallback *time.Location) (*time.Location, bool) {
@@ -362,7 +362,7 @@ func (h *TaskHandler) HandleSetRepeat(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPITask(t))
+	writeJSON(w, http.StatusOK, toAPITask(t, user.Location()))
 }
 
 // HandleParseRepeat resolves a repeat phrase without changing anything.

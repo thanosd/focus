@@ -83,7 +83,7 @@ func TestAnchoredRepeat(t *testing.T) {
 	firstDue := *set.DueAt
 
 	// Complete it late: the next one is still on the 1st of a later month.
-	done, next, err := taskSvc.Complete(ctx, user.ID, bills.ID)
+	done, next, err := taskSvc.Complete(ctx, user, bills.ID)
 	if err != nil || done.Status != "completed" || next == nil || next.DueAt == nil {
 		t.Fatalf("complete: %v %+v %+v", err, done, next)
 	}

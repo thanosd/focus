@@ -247,7 +247,7 @@ func TestRepositoriesAndServices(t *testing.T) {
 	}
 
 	// Complete: repeating task spawns next occurrence a week after the due date
-	done, next, err := taskSvc.Complete(ctx, user.ID, moved.ID)
+	done, next, err := taskSvc.Complete(ctx, u, moved.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
