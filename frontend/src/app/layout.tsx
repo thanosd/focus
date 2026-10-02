@@ -56,7 +56,7 @@ export default function RootLayout({
               <ConfirmProvider>
                 <TooltipProvider delayDuration={200}>
                   {/* Columns: navigation | (project/tag) | items | properties */}
-                  <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
+                  <div className="min-h-screen flex flex-col bg-gray-50">
                     <AppHeader />
                     <div className="flex flex-1 min-w-0">
                       <Sidebar />

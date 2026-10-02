@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  /* Horizontal-scroll guard lives on the root so it can't interfere with
+     sticky/fixed descendants (overflow on html/body propagates to the
+     viewport instead of creating a clipping ancestor). */
+  html,
+  body {
+    overflow-x: hidden;
+  }
   body {
     font-family: var(--font-focus-sans), sans-serif;
   }

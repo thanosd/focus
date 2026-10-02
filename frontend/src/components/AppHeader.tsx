@@ -32,51 +32,57 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between h-14 px-4 md:px-6 bg-white border-b border-gray-200">
-      <div className="flex items-center gap-1 min-w-0">
-        <MobileNav />
-        <Link href="/inbox" className="flex items-center gap-2 min-w-0">
-          <Logo className="w-6 h-6 flex-shrink-0" />
-          <span className="text-lg font-semibold text-gray-900 truncate">
-            Focus
-          </span>
-        </Link>
-      </div>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors data-[state=open]:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          >
-            <Avatar
-              email={user.email}
-              name={user.name}
-              pictureUrl={user.picture_url}
-              size="md"
-            />
-            <span
-              className="hidden sm:inline text-sm font-medium text-gray-900 max-w-[12rem] truncate"
-              title={user.email}
-            >
-              {displayName}
+    // Fixed, not sticky: sticky breaks under any ancestor that clips
+    // overflow, and the header must never move when the page scrolls.
+    // The spacer div below keeps content from sliding under it.
+    <>
+      <header className="fixed top-0 inset-x-0 z-50 flex items-center justify-between h-14 px-4 md:px-6 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-1 min-w-0">
+          <MobileNav />
+          <Link href="/inbox" className="flex items-center gap-2 min-w-0">
+            <Logo className="w-6 h-6 flex-shrink-0" />
+            <span className="text-lg font-semibold text-gray-900 truncate">
+              Focus
             </span>
-            <ChevronDown className="hidden sm:block w-4 h-4 text-gray-500" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
-          <DropdownMenuLabel className="normal-case tracking-normal font-normal text-gray-500 truncate">
-            {user.email}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => router.push("/settings")}>
-            <Settings /> Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={handleSignOut}>
-            <LogOut /> Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </header>
+          </Link>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors data-[state=open]:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <Avatar
+                email={user.email}
+                name={user.name}
+                pictureUrl={user.picture_url}
+                size="md"
+              />
+              <span
+                className="hidden sm:inline text-sm font-medium text-gray-900 max-w-[12rem] truncate"
+                title={user.email}
+              >
+                {displayName}
+              </span>
+              <ChevronDown className="hidden sm:block w-4 h-4 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel className="normal-case tracking-normal font-normal text-gray-500 truncate">
+              {user.email}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => router.push("/settings")}>
+              <Settings /> Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleSignOut}>
+              <LogOut /> Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+      <div aria-hidden="true" className="h-14 flex-shrink-0" />
+    </>
   );
 }
