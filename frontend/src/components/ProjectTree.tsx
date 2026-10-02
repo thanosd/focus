@@ -110,7 +110,14 @@ function TreeRow({
     >
       <GripVertical className="w-3.5 h-3.5" />
     </button>
-  ) : null;
+  ) : (
+    // Keep the handle's footprint so a project with no siblings lines up
+    // with rows that do have one (same -ml-1 + padding + 14px icon).
+    <span
+      aria-hidden="true"
+      className="-ml-1 w-[26px] md:w-[18px] h-4 flex-shrink-0"
+    />
+  );
   return (
     <div
       ref={setNodeRef}
