@@ -27,6 +27,14 @@ If trunk check fails, fix the issues before pushing. Never push code that fails 
 - **Linting**: Trunk (`.trunk/trunk.yaml`)
 - **CI**: GitHub Actions (`.github/workflows/ci.yml`); merge to `main` deploys production
 
+## Delivery process
+
+Work happens on a branch and lands through a pull request: open the PR with
+`gh pr create`, watch `gh pr checks --watch` until green, fix on the branch
+if anything is red. The user merges. Pushing to `main` is what deploys
+production, so nothing goes to `main` without green CI. After a merge, watch
+the "Deploy to Production" run (`gh run watch`) and report if it fails.
+
 ## Definition of Done
 
 Before pushing, run:

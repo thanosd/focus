@@ -24,24 +24,53 @@ jobs:
   go-check:
     name: Go Build & Test
     runs-on: ubuntu-latest
+    # Real Postgres for the integration tests: deterministic, no binary
+    # download from Maven Central at test time (that lookup is what broke
+    # the Go job). backend/internal/testdb uses TEST_DATABASE_URL when set.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      # Install the exact toolchain go.mod pins (not the `go` directive) so
+      # Go never auto-downloads a toolchain in CI. With the download, the
+      # setup-go module cache restores a half-extracted toolchain and the
+      # next run dies with "tar: Cannot open: File exists".
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: 1.26.8
           cache: true
+        env:
+          GOTOOLCHAIN: local
 
       - name: Build
+        env:
+          GOTOOLCHAIN: local
         run: go build ./backend/...
 
       - name: Vet
+        env:
+          GOTOOLCHAIN: local
         run: go vet ./backend/...
 
       - name: Test
-        run: TZ=UTC go test ./backend/...
+        env:
+          GOTOOLCHAIN: local
+          TZ: UTC
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable # checkov:skip=CKV_SECRET_4:CI-only throwaway credential
+        run: go test ./backend/...
 
   typescript-check:
     name: TypeScript Check
