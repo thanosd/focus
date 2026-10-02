@@ -11,6 +11,7 @@ import TaskList from "@/components/TaskList";
 import TaskInspector from "@/components/TaskInspector";
 import QuickAdd from "@/components/QuickAdd";
 import DockedPane from "@/components/DockedPane";
+import BackLink from "@/components/BackLink";
 
 interface TaskWorkspaceProps {
   title: string;
@@ -26,6 +27,9 @@ interface TaskWorkspaceProps {
   headerExtra?: React.ReactNode;
   /** Allow drag-and-drop reordering (inbox). */
   sortable?: boolean;
+  /** Phone-only back control in the header. */
+  backHref?: string;
+  backLabel?: string;
 }
 
 /**
@@ -43,6 +47,8 @@ export default function TaskWorkspace({
   keep,
   headerExtra,
   sortable = false,
+  backHref,
+  backLabel = "Back",
 }: TaskWorkspaceProps) {
   const { tasks, loading, error, upsert, remove, append, setTasks } =
     useTasks(query);
@@ -99,11 +105,13 @@ export default function TaskWorkspace({
   const close = useCallback(() => setSelected(null), []);
 
   return (
-    <div className="flex flex-1 items-start">
-      <div className="flex-1 min-w-0 p-6 md:p-8">
+    // Columns: items | properties.
+    <div className="flex flex-1 items-start min-w-0">
+      <div className="flex-1 min-w-0 p-4 md:p-8">
         <div className="max-w-6xl">
-          <div className="mb-5 flex items-start justify-between gap-4">
-            <div>
+          <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              {backHref && <BackLink href={backHref} label={backLabel} />}
               <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
               {subtitle && (
                 <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>

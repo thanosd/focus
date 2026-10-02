@@ -28,8 +28,13 @@ function TagContent({ tagId }: { tagId: string }) {
       quickAdd={{ tagIds: [tagId] }}
       keep={(t) => t.status === "active" && t.tags.some((x) => x.id === tagId)}
       emptyMessage="No available tasks with this tag."
+      backHref="/tags"
+      backLabel="Tags"
       headerExtra={
-        <Link href="/tags" className="text-sm text-blue-600 hover:underline">
+        <Link
+          href="/tags"
+          className="hidden md:inline text-sm text-blue-600 hover:underline"
+        >
           All tags
         </Link>
       }

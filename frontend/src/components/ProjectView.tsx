@@ -9,12 +9,18 @@ import type {
   UpdateProjectRequest,
 } from "@/lib/types";
 import { applyOrder } from "@/lib/availability";
+import { subtree } from "@/lib/projects";
 import { useCounts } from "@/contexts/CountsContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CornerDownRight,
+  SlidersHorizontal,
+} from "lucide-react";
 import TaskList from "@/components/TaskList";
 import TaskInspector from "@/components/TaskInspector";
 import ProjectInspector from "@/components/ProjectInspector";
@@ -35,6 +41,9 @@ interface ProjectViewProps {
   onProjectDeleted?: (id: string) => void;
   /** Deselect the project (closes the pane on the projects page). */
   onClose?: () => void;
+  /** Phone-only back control shown in the items column header. */
+  backHref?: string;
+  backLabel?: string;
   /** Extra buttons rendered next to "Mark reviewed" (review mode). */
   actions?: React.ReactNode;
   /** Review mode: tighter header. */
@@ -55,6 +64,8 @@ export default function ProjectView({
   onProjectChanged,
   onProjectDeleted,
   onClose,
+  backHref,
+  backLabel = "Back",
   actions,
   compact = false,
 }: ProjectViewProps) {
@@ -66,6 +77,8 @@ export default function ProjectView({
   const [selected, setSelected] = useState<Task | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Phone: the project's properties open as a sheet from this button.
+  const [propsOpen, setPropsOpen] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error } = await apiClient.GET("/api/projects/{projectId}", {
@@ -208,8 +221,9 @@ export default function ProjectView({
   const closeTask = useCallback(() => setSelected(null), []);
   const closePane = useCallback(() => {
     setSelected(null);
-    onClose?.();
-  }, [onClose]);
+    if (propsOpen) setPropsOpen(false);
+    else onClose?.();
+  }, [onClose, propsOpen]);
 
   if (error) {
     return (
@@ -230,6 +244,15 @@ export default function ProjectView({
   const parent = project.parent_id
     ? projects.find((p) => p.id === project.parent_id)
     : undefined;
+  // Full nested hierarchy for the items column (sub-projects and theirs).
+  const descendants = subtree(
+    treeProjects && treeProjects.length > 0 ? treeProjects : projects,
+    projectId,
+  );
+  const hierarchy =
+    descendants.length > 0
+      ? descendants
+      : children.map((c) => ({ project: c, depth: 1 }));
   const visibleTasks = showDone
     ? detail.tasks
     : detail.tasks.filter((t) => t.status === "active");
@@ -238,10 +261,20 @@ export default function ProjectView({
     detail.tasks.filter((t) => t.status === "active").length;
 
   return (
-    <div className="flex flex-1 items-start">
-      <div className="flex-1 min-w-0 p-6 md:p-8">
+    // Columns: items | properties.
+    <div className="flex flex-1 items-start min-w-0">
+      <div className="flex-1 min-w-0 p-4 md:p-8">
         <div className="space-y-4">
           <div>
+            {backHref && (
+              <Link
+                href={backHref}
+                className="md:hidden inline-flex items-center gap-1 py-2 -ml-1 pr-2 text-sm text-blue-600"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {backLabel}
+              </Link>
+            )}
             {parent && (
               <Link
                 href={`/projects/${parent.id}`}
@@ -264,25 +297,46 @@ export default function ProjectView({
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 pt-1">
                 <StatusBadge status={project.status} />
+                <Button
+                  size="xs"
+                  className="md:hidden min-h-[40px]"
+                  onClick={() => {
+                    setSelected(null);
+                    setPropsOpen(true);
+                  }}
+                  aria-label="Project properties"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" /> Properties
+                </Button>
               </div>
             </div>
           </div>
 
-          {children.length > 0 && (
+          {hierarchy.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-lg">
               <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                 Sub-projects
+                <span className="ml-1 font-normal normal-case text-gray-400">
+                  {hierarchy.length}
+                </span>
               </div>
-              {children.map((c) => (
+              {hierarchy.map(({ project: sub, depth }) => (
                 <Link
-                  key={c.id}
-                  href={`/projects/${c.id}`}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  key={sub.id}
+                  href={`/projects/${sub.id}`}
+                  className="flex items-center gap-2 pr-4 py-2.5 md:py-2 min-h-[40px] text-sm text-gray-800 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  style={{ paddingLeft: `${16 + (depth - 1) * 20}px` }}
                 >
-                  <span className="flex-1 truncate">{c.name}</span>
-                  <StatusBadge status={c.status} />
-                  <span className="text-[11px] text-gray-400 tabular-nums">
-                    {c.available_task_count}/{c.remaining_task_count}
+                  {depth > 1 && (
+                    <CornerDownRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                  )}
+                  <span className="flex-1 truncate">{sub.name}</span>
+                  <StatusBadge status={sub.status} />
+                  <span
+                    className="text-[11px] text-gray-400 tabular-nums flex-shrink-0"
+                    title={`${sub.available_task_count} available / ${sub.remaining_task_count} remaining`}
+                  >
+                    {sub.available_task_count}/{sub.remaining_task_count}
                   </span>
                 </Link>
               ))}
@@ -330,7 +384,7 @@ export default function ProjectView({
       </div>
 
       <DockedPane
-        open={!!selected}
+        open={!!selected || propsOpen}
         desktopAlwaysOpen
         onClose={closePane}
         label={selected ? "Task details" : "Project details"}
@@ -353,7 +407,6 @@ export default function ProjectView({
           <ProjectInspector
             project={project}
             projects={projects}
-            allProjects={treeProjects}
             childCount={children.length}
             busy={busy}
             onPatch={patchProject}

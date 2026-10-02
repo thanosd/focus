@@ -102,9 +102,9 @@ function TreeRow({
       aria-label={`Drag to reorder ${p.name}`}
       title="Drag to reorder"
       className={cn(
-        "-ml-1 p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0",
+        "-ml-1 p-1.5 md:p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-        "opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100",
+        "md:opacity-0 md:group-hover/row:opacity-100 focus-visible:opacity-100",
         isDragging && "opacity-100 text-gray-500",
       )}
     >
@@ -208,7 +208,7 @@ export default function ProjectTree({
             if (dragging) e.preventDefault();
           }}
           className={cn(
-            "flex items-center gap-2 py-1.5 pr-8 rounded-md text-sm transition-colors",
+            "flex items-center gap-2 py-2.5 md:py-1.5 pr-10 md:pr-8 min-h-[40px] md:min-h-0 rounded-md text-sm transition-colors",
             active
               ? "bg-blue-50 text-blue-700 font-medium"
               : "text-gray-700 hover:bg-gray-100",
@@ -229,7 +229,7 @@ export default function ProjectTree({
                   return n;
                 });
               }}
-              className="w-4 h-4 flex items-center justify-center text-gray-400 rounded hover:text-gray-600"
+              className="w-8 h-8 -my-2 md:w-4 md:h-4 md:my-0 flex items-center justify-center text-gray-400 rounded hover:text-gray-600"
               aria-label={isCollapsed ? "Expand" : "Collapse"}
             >
               <ChevronRight
@@ -258,7 +258,7 @@ export default function ProjectTree({
                 <button
                   type="button"
                   aria-label={`Actions for ${p.name}`}
-                  className="p-0.5 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-200 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="p-2 md:p-0.5 rounded text-gray-400 md:text-gray-300 hover:text-gray-600 hover:bg-gray-200 md:opacity-0 md:group-hover/row:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
                   <MoreHorizontal className="w-4 h-4" />
                 </button>
@@ -353,7 +353,7 @@ export default function ProjectTree({
           )}
         </div>
       </DndContext>
-      <label className="mt-3 flex items-center gap-2 text-xs text-gray-500 px-2">
+      <label className="mt-3 flex items-center gap-2 text-xs text-gray-500 px-2 min-h-[40px] md:min-h-0">
         <Checkbox
           checked={showInactive}
           onCheckedChange={(c) => onToggleInactive(c === true)}

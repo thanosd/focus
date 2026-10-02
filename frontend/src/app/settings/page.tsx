@@ -133,7 +133,7 @@ function SettingsContent() {
   const snippet = `claude mcp add --transport http focus ${mcpUrl} --header "Authorization: Bearer ${newSecret ?? "<token>"}"`;
 
   return (
-    <div className="p-6 md:p-8 max-w-3xl space-y-6">
+    <div className="p-4 md:p-8 max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="text-sm text-gray-500 mt-0.5">
@@ -148,7 +148,7 @@ function SettingsContent() {
           &ldquo;tomorrow&rdquo; or &ldquo;next Monday&rdquo; when deferring
           tasks.
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <TimezonePicker
             value={tz}
             options={options}
@@ -180,7 +180,10 @@ function SettingsContent() {
           tasks through the Focus MCP server. Each token is shown once.
         </p>
 
-        <form onSubmit={createToken} className="flex items-center gap-2 mb-4">
+        <form
+          onSubmit={createToken}
+          className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4"
+        >
           <Input
             value={tokenName}
             onChange={(e) => setTokenName(e.target.value)}

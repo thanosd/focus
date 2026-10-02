@@ -64,6 +64,27 @@ const SheetContent = React.forwardRef<
 ));
 SheetContent.displayName = "SheetContent";
 
+/** Left-hand drawer (phone navigation). */
+const DrawerContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed inset-y-0 left-0 z-[95] flex w-72 max-w-[85vw] flex-col bg-white shadow-xl outline-none",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPortal>
+));
+DrawerContent.displayName = "DrawerContent";
+
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
@@ -110,6 +131,7 @@ export {
   DialogOverlay,
   DialogContent,
   SheetContent,
+  DrawerContent,
   DialogTitle,
   DialogDescription,
   DialogCloseButton,

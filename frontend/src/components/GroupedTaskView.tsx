@@ -9,6 +9,7 @@ import TaskList from "@/components/TaskList";
 import TaskInspector from "@/components/TaskInspector";
 import QuickAdd from "@/components/QuickAdd";
 import DockedPane from "@/components/DockedPane";
+import BackLink from "@/components/BackLink";
 import { Switch } from "@/components/ui/switch";
 
 export interface TaskGroup {
@@ -37,6 +38,9 @@ interface GroupedTaskViewProps {
   keep?: (task: Task) => boolean;
   emptyMessage?: string;
   headerExtra?: React.ReactNode;
+  /** Phone-only back control in the header. */
+  backHref?: string;
+  backLabel?: string;
 }
 
 /**
@@ -54,6 +58,8 @@ export default function GroupedTaskView({
   keep,
   emptyMessage = "Nothing here.",
   headerExtra,
+  backHref,
+  backLabel = "Back",
 }: GroupedTaskViewProps) {
   const { tasks, loading, error, upsert, remove, append } = useTasks(query);
   const { projects, tags, addTag } = useProjectsAndTags();
@@ -107,17 +113,19 @@ export default function GroupedTaskView({
   const close = useCallback(() => setSelected(null), []);
 
   return (
-    <div className="flex flex-1 items-start">
-      <div className="flex-1 min-w-0 p-6 md:p-8">
+    // Columns: items | properties.
+    <div className="flex flex-1 items-start min-w-0">
+      <div className="flex-1 min-w-0 p-4 md:p-8">
         <div className="max-w-6xl">
           <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
-            <div>
+            <div className="min-w-0">
+              {backHref && <BackLink href={backHref} label={backLabel} />}
               <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
               {subtitle && (
                 <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               {headerExtra}
               {availabilityToggle && (
                 <label className="flex items-center gap-2 text-sm text-gray-600 select-none">

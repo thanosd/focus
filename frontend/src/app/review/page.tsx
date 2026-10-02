@@ -182,7 +182,7 @@ function ReviewContent() {
   if (!current) {
     const finished = total;
     return (
-      <div className="p-6 md:p-8 max-w-4xl space-y-4">
+      <div className="p-4 md:p-8 max-w-4xl space-y-4">
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Review</h1>
@@ -244,7 +244,7 @@ function ReviewContent() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="px-6 md:px-8 pt-6 md:pt-8 flex items-end justify-between gap-4 max-w-4xl flex-wrap">
+      <div className="px-4 md:px-8 pt-4 md:pt-8 flex items-end justify-between gap-4 max-w-4xl flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Review{mode === "all" ? " · all projects" : ""}
@@ -253,7 +253,7 @@ function ReviewContent() {
             Is it still relevant? What is the next action? Should it go on hold?
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-gray-500 tabular-nums">
             {Math.min(index + 1, total)} of {total}
           </span>

@@ -187,7 +187,7 @@ export default function TaskRow({
   return (
     <div
       className={cn(
-        "group relative flex items-start gap-2 px-3 py-2.5 border-b border-gray-100 last:border-b-0 cursor-pointer transition-colors border-l-4",
+        "group relative flex items-start gap-2 px-3 py-3 md:py-2.5 border-b border-gray-100 last:border-b-0 cursor-pointer transition-colors border-l-4",
         selected ? "bg-blue-50" : "hover:bg-gray-50",
         task.flagged && active && !muted
           ? "border-l-red-400 bg-red-50/40"
@@ -206,9 +206,9 @@ export default function TaskRow({
           aria-label="Drag to reorder"
           title="Drag to reorder"
           className={cn(
-            "mt-0.5 -ml-1 p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0",
+            "-mt-0.5 -ml-1.5 p-1.5 md:mt-0.5 md:p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-            "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            "md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100",
             dragging && "opacity-100 text-gray-500",
           )}
         >
@@ -237,7 +237,7 @@ export default function TaskRow({
             disabled={busy}
             aria-label={done ? "Reopen task" : "Complete task"}
             className={cn(
-              "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+              "w-6 h-6 md:mt-0.5 md:w-5 md:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
               done
                 ? "bg-blue-600 border-blue-600 text-white"
@@ -293,7 +293,7 @@ export default function TaskRow({
           </span>
           {reason && (
             <span
-              className="text-[10px] text-gray-400 italic whitespace-nowrap flex-shrink-0"
+              className="hidden sm:inline text-[10px] text-gray-400 italic whitespace-nowrap flex-shrink-0"
               title="Not available right now"
             >
               {reason}
@@ -372,7 +372,10 @@ export default function TaskRow({
         )}
       </div>
 
-      <div className="flex items-center gap-0.5 flex-shrink-0" onClick={stop}>
+      <div
+        className="flex items-center gap-0.5 flex-shrink-0 -my-1.5 md:my-0"
+        onClick={stop}
+      >
         <Popover open={deferOpen} onOpenChange={setDeferOpen}>
           <PopoverTrigger asChild>
             <button
@@ -381,7 +384,7 @@ export default function TaskRow({
               aria-label="Defer task"
               title="Defer"
               className={cn(
-                "p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                "hidden md:block p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
                 deferOpen
                   ? "bg-gray-200 text-gray-700"
                   : "text-gray-300 hover:text-gray-600 hover:bg-gray-100 group-hover:text-gray-400",
@@ -413,7 +416,7 @@ export default function TaskRow({
           aria-label={task.flagged ? "Remove flag" : "Flag as urgent"}
           title={task.flagged ? "Flagged (urgent)" : "Flag as urgent"}
           className={cn(
-            "p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+            "p-2.5 md:p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
             task.flagged
               ? muted
                 ? "text-red-300 hover:text-red-500"
@@ -432,7 +435,7 @@ export default function TaskRow({
               type="button"
               disabled={busy}
               aria-label="More actions"
-              className="p-1 rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-100 group-hover:text-gray-400 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="p-2.5 md:p-1 rounded-md text-gray-400 md:text-gray-300 hover:text-gray-600 hover:bg-gray-100 group-hover:text-gray-400 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               <MoreHorizontal className="w-4 h-4" />
             </button>

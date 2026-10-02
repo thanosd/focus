@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -37,6 +37,11 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -50,9 +55,10 @@ export default function RootLayout({
             <ToastProvider>
               <ConfirmProvider>
                 <TooltipProvider delayDuration={200}>
-                  <div className="min-h-screen flex flex-col bg-gray-50">
+                  {/* Columns: navigation | (project/tag) | items | properties */}
+                  <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
                     <AppHeader />
-                    <div className="flex flex-1">
+                    <div className="flex flex-1 min-w-0">
                       <Sidebar />
                       <main className="flex-1 min-w-0 flex flex-col">
                         {children}

@@ -13,6 +13,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 function ProjectsContent({ selectedId }: { selectedId?: string }) {
@@ -153,8 +154,15 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
   };
 
   return (
-    <div className="flex flex-1 items-start">
-      <div className="w-72 md:w-[24rem] xl:w-[28rem] flex-shrink-0 p-6 md:p-8 md:pr-0 space-y-3">
+    // Columns: project/tag | items | properties. On phones only one shows at
+    // a time: the tree on /projects, the items column on /projects/[id].
+    <div className="flex flex-1 items-start min-w-0">
+      <div
+        className={cn(
+          "w-full md:w-[24rem] xl:w-[28rem] flex-shrink-0 p-4 md:p-8 md:pr-0 space-y-3 min-w-0",
+          selectedId && "hidden md:block",
+        )}
+      >
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
           <Button
@@ -196,6 +204,8 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
       {selectedId ? (
         <div className="flex-1 min-w-0 flex items-start">
           <ProjectView
+            backHref="/projects"
+            backLabel="Projects"
             key={`${selectedId}:${version}`}
             projectId={selectedId}
             projects={activeProjects}
@@ -211,7 +221,7 @@ function ProjectsContent({ selectedId }: { selectedId?: string }) {
           />
         </div>
       ) : (
-        <div className="flex-1 min-w-0 p-6 md:p-8">
+        <div className="hidden md:block flex-1 min-w-0 p-6 md:p-8">
           <div className="bg-white border border-dashed border-gray-200 rounded-lg p-12 text-center text-sm text-gray-500">
             {loaded && activeProjects.length === 0
               ? "Create your first project to get started."

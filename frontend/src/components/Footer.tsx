@@ -7,7 +7,7 @@ export default function Footer() {
         href="https://cosmicteacups.com"
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-center justify-center gap-3 text-sm text-gray-600 transition-opacity hover:opacity-90"
+        className="group flex flex-wrap items-center justify-center gap-3 text-sm text-gray-600 text-center transition-opacity hover:opacity-90"
       >
         <span>Crafted with love (and a lot of AI) at Cosmic Teacups</span>
         <Image
