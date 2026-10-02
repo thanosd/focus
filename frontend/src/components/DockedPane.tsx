@@ -2,6 +2,7 @@
 
 import { HEADER_HEIGHT_PX } from "@/components/AppHeader";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
+import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 interface DockedPaneProps {
@@ -36,6 +37,10 @@ export default function DockedPane({
   desktopAlwaysOpen = false,
   children,
 }: DockedPaneProps) {
+  // The sheet is portaled to <body>, so a `md:hidden` wrapper can't hide
+  // it; decide with a real media query instead and never mount it on
+  // desktop (a mounted Dialog would also lock page scrolling there).
+  const isDesktop = useIsDesktop();
   return (
     <>
       <aside
@@ -58,11 +63,11 @@ export default function DockedPane({
         )}
       </aside>
 
-      <div className="md:hidden">
+      {!isDesktop && (
         <Dialog open={open} onOpenChange={(o) => !o && onClose?.()}>
           <SheetContent aria-label={label}>{open && children}</SheetContent>
         </Dialog>
-      </div>
+      )}
     </>
   );
 }

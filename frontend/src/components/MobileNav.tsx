@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { useState } from "react";
 import { Menu } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -14,8 +15,9 @@ import {
 /** Hamburger + left drawer holding the navigation column on phones. */
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
+  const isDesktop = useIsDesktop();
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open && !isDesktop} onOpenChange={setOpen}>
       <button
         type="button"
         onClick={() => setOpen(true)}
