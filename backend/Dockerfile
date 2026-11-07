@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     ./backend/cmd/focus
 
 # Final stage
-FROM alpine:3.21
+FROM alpine:3.24
 
 # hadolint ignore=DL3018
 RUN apk --no-cache add ca-certificates tzdata

@@ -1,12 +1,8 @@
-# Remaining transitive CVE in the Pulumi/infra toolchain after `npm audit fix`.
-# The @opentelemetry stack is pinned at 1.30.1 by @pulumi/pulumi; the fix lands
-# only in @opentelemetry/core 2.x, which cannot be adopted without Pulumi
-# upgrading the whole otel SDK in lockstep. CI/IaC-only (Pulumi plan/apply), not
-# in any deployed runtime request path, and the W3C Baggage input is not
-# attacker-controlled here. Revisit at the next @pulumi/pulumi upgrade.
-# Last refreshed 2026-06-26.
-
-[[IgnoredVulns]]
-id = "GHSA-8988-4f7v-96qf"
-ignoreUntil = 2026-09-26
-reason = "@opentelemetry/core memory alloc; pinned by Pulumi SDK, CI/IaC-only, no untrusted W3C Baggage input"
+# osv-scanner suppressions for the Pulumi/infra toolchain. Add [[IgnoredVulns]]
+# entries with an id, a reason and an ignoreUntil date when an advisory has no
+# fix yet.
+#
+# GHSA-8988-4f7v-96qf (@opentelemetry/core) was suppressed here until
+# @pulumi/pulumi moved to the otel 2.x SDK; package.json now requires
+# @pulumi/pulumi ^3.274.0, which depends on @opentelemetry/core ^2.9.
+# Last refreshed 2026-11-07.
