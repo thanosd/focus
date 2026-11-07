@@ -24,7 +24,7 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "lucide-react": "^1.49.0",
-    "next": "^16.3.3",
+    "next": "^16.4.5",
     "openapi-fetch": "^0.15.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -45,6 +45,9 @@
   },
   "overrides": {
     "js-yaml": "^4.1.0",
-    "postcss": "^8.5.13"
+    "postcss": "^8.5.13",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.5"
+    }
   }
 }

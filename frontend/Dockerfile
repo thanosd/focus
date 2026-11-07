@@ -2,7 +2,7 @@
 # (.next/standalone) is plain JavaScript, so one native build serves both
 # halves of a multi-arch image instead of repeating npm ci + next build
 # under QEMU (which took the arm64 half from minutes to ~an hour in CI).
-FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -42,7 +42,7 @@ RUN find .next/standalone -name '*.node' > /tmp/native-modules.txt && \
     ! grep -v '@img/sharp-' /tmp/native-modules.txt | grep -q .
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
